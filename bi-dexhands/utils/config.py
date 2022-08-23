@@ -15,6 +15,7 @@ from isaacgym import gymutil
 import numpy as np
 import random
 import torch
+from utils.wandb import init_wandb
 
 
 def set_np_formatting():
@@ -102,6 +103,15 @@ def load_cfg(args, use_rlg_config=False):
         cfg["task"] = {"randomize": False}
 
     logdir = args.logdir
+    if "wandb_activate" in args:
+        cfg["wandb_activate"] = args.wandb_activate
+    if "wandb_project" in args:
+        cfg["wandb_project"] = args.wandb_project
+    if "wandb_name" in args:
+        cfg["wandb_name"] = args.wandb_name
+
+    cfg["algo"] = args.algo
+
     if use_rlg_config:
 
         # Set deterministic mode
@@ -249,7 +259,16 @@ def get_args(benchmark=False, use_rlg_config=False):
         {"name": "--model_dir", "type": str, "default": "",
             "help": "Choose a model dir"},
         {"name": "--datatype", "type": str, "default": "random",
-            "help": "Choose an ffline datatype"}]
+            "help": "Choose an ffline datatype"},
+        {"name": "--wandb_activate", "type": bool, "default": False,
+            "help": "Activate WandB"},
+        {"name": "--wandb_entity", "type": str, "default": "",
+            "help": "Account of WandB"},
+        {"name": "--wandb_project", "type": str, "default": "bi-dexhands",
+            "help": "Choose a project name"},
+        {"name": "--record_video", "type": bool, "default": False,
+            "help": "Record video"}]
+
 
     if benchmark:
         custom_parameters += [{"name": "--num_proc", "type": int, "default": 1, "help": "Number of child processes to launch"},
@@ -263,6 +282,8 @@ def get_args(benchmark=False, use_rlg_config=False):
     args = gymutil.parse_arguments(
         description="RL Policy",
         custom_parameters=custom_parameters)
+
+    print('raw: ', args)
 
     # allignment with examples
     args.device_id = args.compute_device_id
@@ -297,6 +318,13 @@ def get_args(benchmark=False, use_rlg_config=False):
 
     if args.cfg_env == "Base":
         args.cfg_env = cfg_env
+
+    from datetime import datetime
+    now = datetime.now()
+    args.save_time_stamp = now.strftime("%Y%m%d%H%M%S")
+    args.wandb_name = '_'.join((args.task, args.algo, str(args.save_time_stamp)))
+    if args.wandb_activate:
+        init_wandb(args)
 
     # if args.algo not in ["maddpg", "happo", "mappo", "hatrpo","ippo","ppo","sac","td3","ddpg","trpo"]:
     #     warn_algorithm_name()

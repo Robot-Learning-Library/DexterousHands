@@ -43,6 +43,7 @@ from tasks.hand_base.meta_vec_task import MetaVecTaskPython
 from utils.config import warn_task_name
 
 import json
+import gym
 
 
 def parse_task(args, cfg, cfg_train, sim_params, agent_index):
@@ -93,6 +94,16 @@ def parse_task(args, cfg, cfg_train, sim_params, agent_index):
         except NameError as e:
             print(e)
             warn_task_name()
+
+        if args.record_video:
+            record_video_interval = int(1e2)
+            record_video_length = 300
+            task.is_vector_env = True
+            task = gym.wrappers.RecordVideo(task, f"data/videos/{args.task}_{args.algo}_{args.save_time_stamp}",\
+                    step_trigger=lambda step: step % record_video_interval == 0, # record the videos every record_video_interval steps
+                    video_length=record_video_length, 
+                    )
+                    
         if args.task == "OneFrankaCabinet" :
             env = VecTaskPythonArm(task, rl_device)
         else :
@@ -168,4 +179,6 @@ def parse_task(args, cfg, cfg_train, sim_params, agent_index):
             print(e)
             warn_task_name()
         env = MetaVecTaskPython(task, rl_device)
+
+
     return task, env

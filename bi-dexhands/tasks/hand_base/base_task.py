@@ -24,6 +24,16 @@ class BaseTask():
     def __init__(self, cfg, enable_camera_sensors=False, is_meta=False, task_num=0):
         self.gym = gymapi.acquire_gym()
 
+        self.rl_device = None
+        self.metadata =  {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 24}
+        self.virtual_display = None
+        SCREEN_CAPTURE_RESOLUTION = (1027, 768)
+        
+        self.virtual_display = None
+        from pyvirtualdisplay.smartdisplay import SmartDisplay
+        self.virtual_display = SmartDisplay(size=SCREEN_CAPTURE_RESOLUTION)
+        self.virtual_display.start()
+
         self.device_type = cfg.get("device_type", "cuda")
         self.device_id = cfg.get("device_id", 0)
 
@@ -148,10 +158,13 @@ class BaseTask():
         if self.dr_randomizations.get('observations', None):
             self.obs_buf = self.dr_randomizations['observations']['noise_lambda'](self.obs_buf)
 
+        # require some return for video recorder
+        return self.obs_buf.to(self.rl_device), self.rew_buf.to(self.rl_device), self.reset_buf.to(self.rl_device), self.extras
+
     def get_states(self):
         return self.states_buf
 
-    def render(self, sync_frame_time=False):
+    def render(self, sync_frame_time=False, mode="rgb_array"):
         if self.viewer:
             # check for window closed
             if self.gym.query_viewer_has_closed(self.viewer):
@@ -172,8 +185,17 @@ class BaseTask():
             if self.enable_viewer_sync:
                 self.gym.step_graphics(self.sim)
                 self.gym.draw_viewer(self.viewer, self.sim, True)
+
+                # Wait for dt to elapse in real time.
+                # This synchronizes the physics simulation with the rendering rate.
+                self.gym.sync_frame_time(self.sim)
+
             else:
                 self.gym.poll_viewer_events(self.viewer)
+
+            if self.virtual_display and mode == "rgb_array":
+                img = self.virtual_display.grab()
+                return np.array(img)
 
     def get_actor_params_info(self, dr_params, env):
         """Returns a flat array of actor params, their names and ranges."""
