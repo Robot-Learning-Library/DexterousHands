@@ -1,6 +1,10 @@
 # Bi-DexHands: Bimanual Dexterous Manipulation via Reinforcement Learning
 <img src="assets/image_folder/coverv3.jpg" width="1000" border="1"/>
 
+Train with:
+```
+python train.py --task=ShadowHandOver --algo=ppo --record_video=True --wandb_activate=True --wandb_entity **
+```
 ****
 [![PyPI](https://img.shields.io/pypi/v/bidexhands)](https://pypi.org/project/bidexhands/)
 [![Organization](https://img.shields.io/badge/Organization-PKU_MARL-blue.svg "Organization")](https://github.com/PKU-MARL "Organization")
