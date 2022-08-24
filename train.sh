@@ -1,7 +1,11 @@
 DATE=`date '+%Y%m%d_%H%M'`
 echo "Save as: " $DATE
 
-declare -a tasks=('ShadowHandOver')
+declare -a tasks=(
+# 'ShadowHandOver' 
+'ShadowHandCatchUnderarm' 'ShadowHandCatchOver2Underarm' 'ShadowHandCatchAbreast' 'ShadowHandCatchTwoCatchUnderarm' 
+'ShadowHandLiftUnderarm' 'ShadowHandDoorOpenInward' 'ShadowHandDoorOpenOutward' 'ShadowHandDoorCloseInward' 'ShadowHandBottleCap' 'ShadowHandPushBlock'
+'ShadowHandOpenScissors' 'ShadowHandOpenPenCap' 'ShadowHandSwingCup' 'ShadowHandTurnBotton' 'ShadowHandGraspAndPlace')
 
 
 mkdir -p log/$DATE
