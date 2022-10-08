@@ -267,8 +267,10 @@ def get_args(benchmark=False, use_rlg_config=False):
         {"name": "--wandb_project", "type": str, "default": "bi-dexhands",
             "help": "Choose a project name"},
         {"name": "--record_video", "type": bool, "default": False,
-            "help": "Record video"}]
-
+            "help": "Record video"},
+        {"name": "--record_video_interval", "type": int, "default": 100,
+            "help": "Interval (episodes) for recording videos"},
+    ]
 
     if benchmark:
         custom_parameters += [{"name": "--num_proc", "type": int, "default": 1, "help": "Number of child processes to launch"},
