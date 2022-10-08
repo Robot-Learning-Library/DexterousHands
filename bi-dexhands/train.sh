@@ -8,7 +8,7 @@ echo "Save as: " $DATE
 # 'ShadowHandOpenScissors' 'ShadowHandOpenPenCap' 'ShadowHandSwingCup' 'ShadowHandTurnBotton' 'ShadowHandGraspAndPlace'
 # )
 
-declare -a tasks=('ShadowHandOver' )
+declare -a tasks=('ShadowHandCatchAbreast' )
 
 
 mkdir -p log/$DATE
