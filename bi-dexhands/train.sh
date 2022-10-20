@@ -2,14 +2,14 @@ DATE=`date '+%Y%m%d_%H%M'`
 echo "Save as: " $DATE
 
 # declare -a tasks=('ShadowHandCatchAbreast' 'ShadowHandOver')
-declare -a tasks=('ShadowHandPen' 'ShadowHandSwingCup')
+# declare -a tasks=('ShadowHandPen' 'ShadowHandSwingCup')
 
-# declare -a tasks=('ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandBlockStack' 'ShadowHandCatchUnderarm'
-# 'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap' 'ShadowHandLiftUnderarm' 'ShadowHandTwoCatchUnderarm'
-# 'ShadowHandDoorOpenInward' 'ShadowHandDoorOpenOutward' 'ShadowHandDoorCloseInward' 'ShadowHandDoorCloseOutward'
-# 'ShadowHandPushBlock' 'ShadowHandKettle' 'ShadowHandLiftUnderarm' 'ShadowHandPointCloud' 'ShadowHandReOrientation'
-# 'ShadowHandScissors' 'ShadowHandPen' 'ShadowHandSwingCup' 'ShadowHandBottleCap' 'ShadowHandGraspAndPlace' 'ShadowHandSwitch'
-# )
+declare -a tasks=('ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandBlockStack' 'ShadowHandCatchUnderarm'
+'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap' 'ShadowHandLiftUnderarm' 'ShadowHandTwoCatchUnderarm'
+'ShadowHandDoorOpenInward' 'ShadowHandDoorOpenOutward' 'ShadowHandDoorCloseInward' 'ShadowHandDoorCloseOutward'
+'ShadowHandPushBlock' 'ShadowHandKettle' 'ShadowHandLiftUnderarm' 'ShadowHandPointCloud' 'ShadowHandReOrientation'
+'ShadowHandScissors' 'ShadowHandPen' 'ShadowHandSwingCup' 'ShadowHandBottleCap' 'ShadowHandGraspAndPlace' 'ShadowHandSwitch'
+)
 
 
 mkdir -p log/$DATE
