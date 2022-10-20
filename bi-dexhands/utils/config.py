@@ -286,7 +286,7 @@ def get_args(benchmark=False, use_rlg_config=False):
     args = gymutil.parse_arguments(
         description="RL Policy",
         custom_parameters=custom_parameters)
-
+    
     print('raw: ', args)
 
     # allignment with examples
