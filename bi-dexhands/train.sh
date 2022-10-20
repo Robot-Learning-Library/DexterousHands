@@ -15,6 +15,6 @@ declare -a tasks=('ShadowHandPen' 'ShadowHandSwingCup')
 mkdir -p log/$DATE
 for i in ${!tasks[@]}; do
 	# nohup python train.py --task=${tasks[$i]} --algo=ppo --record_video=True --wandb_activate=True --wandb_entity=quantumiracle >> log/$DATE/${tasks[$i]}.log &
-	echo nohup python train.py --task=${tasks[$i]} --rl_device=cuda:$((2 + i % 6)) --sim_device=cuda:$((i % 8)) --graphics_device_id=cuda:$((i % 8)) --algo=ppo --record_video=True --record_video_interval=30 --wandb_activate=True --wandb_entity=quantumiracle : log/$DATE/${tasks[$i]}.log &
-	nohup python train.py --task=${tasks[$i]} --rl_device=cuda:$((2 + i % 6)) --sim_device=cuda:$((i % 8)) --graphics_device_id=cuda:$((i % 8)) --algo=ppo --record_video=True --record_video_interval=30 --wandb_activate=True --wandb_entity=quantumiracle >> log/$DATE/${tasks[$i]}.log &
+	echo nohup python train.py --task=${tasks[$i]} --rl_device=cuda:$((2 + i % 6)) --sim_device=cuda:$((2 + i % 6)) --graphics_device_id=cuda:$((2 + i % 6)) --algo=ppo --record_video=True --record_video_interval=30 --wandb_activate=True --wandb_entity=quantumiracle : log/$DATE/${tasks[$i]}.log &
+	nohup python train.py --task=${tasks[$i]} --rl_device=cuda:$((2 + i % 6)) --sim_device=cuda:$((2 + i % 6)) --graphics_device_id=cuda:$((2 + i % 6)) --algo=ppo --record_video=True --record_video_interval=30 --wandb_activate=True --wandb_entity=quantumiracle >> log/$DATE/${tasks[$i]}.log &
 done
