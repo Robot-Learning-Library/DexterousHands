@@ -12,6 +12,6 @@ declare -a tasks=('ShadowHandPen' 'ShadowHandSwingCup')
 mkdir -p log/$DATE
 for i in ${!tasks[@]}; do
 	# nohup python train.py --task=${tasks[$i]} --algo=ppo --record_video=True --wandb_activate=True --wandb_entity=quantumiracle >> log/$DATE/${tasks[$i]}.log &
-	echo CUDA_VISIBLE_DEVICES=$((i % 8)) nohup python train.py --task=${tasks[$i]} --algo=ppo --record_video=True --record_video_interval=30 --wandb_activate=True --wandb_entity=quantumiracle >> log/$DATE/${tasks[$i]}.log &
+	echo CUDA_VISIBLE_DEVICES=$((i % 8)) nohup python train.py --task=${tasks[$i]} --algo=ppo --record_video=True --record_video_interval=30 --wandb_activate=True --wandb_entity=quantumiracle : log/$DATE/${tasks[$i]}.log &
 	CUDA_VISIBLE_DEVICES=$((i % 8)) nohup python train.py --task=${tasks[$i]} --algo=ppo --record_video=True --record_video_interval=30 --wandb_activate=True --wandb_entity=quantumiracle >> log/$DATE/${tasks[$i]}.log &
 done
