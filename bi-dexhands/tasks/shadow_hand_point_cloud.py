@@ -909,7 +909,8 @@ def compute_hand_reward(
     reward = torch.exp(-0.2*(dist_rew * dist_reward_scale + rot_dist))
 
     # Find out which envs hit the goal and update successes count
-    goal_resets = torch.where(torch.abs(goal_dist) <= 0, torch.ones_like(reset_goal_buf), reset_goal_buf)
+    # goal_resets = torch.where(torch.abs(goal_dist) <= 0, torch.ones_like(reset_goal_buf), reset_goal_buf)
+    goal_resets = torch.where(torch.abs(goal_dist) <= 0.01, torch.ones_like(reset_goal_buf), reset_goal_buf)
     successes = successes + goal_resets
 
     # Success bonus: orientation is within `success_tolerance` of goal orientation

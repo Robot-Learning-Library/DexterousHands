@@ -1,7 +1,7 @@
 # if given, will override the device setting in gym. 
 env: 
   env_name: "shadow_hand_grasp_and_place"
-  numEnvs: 128
+  numEnvs: 2048
   envSpacing: 1.5
   episodeLength: 500
   enableDebugVis: False

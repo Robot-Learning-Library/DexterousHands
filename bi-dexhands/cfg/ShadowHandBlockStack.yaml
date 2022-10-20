@@ -1,7 +1,7 @@
 # if given, will override the device setting in gym. 
 env: 
   env_name: "shadow_hand_block_stack"
-  numEnvs: 1024
+  numEnvs: 2048
   envSpacing: 1.5
   episodeLength: 250
   enableDebugVis: False
