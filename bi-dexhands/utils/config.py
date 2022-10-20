@@ -264,6 +264,8 @@ def get_args(benchmark=False, use_rlg_config=False):
             "help": "Activate WandB"},
         {"name": "--wandb_entity", "type": str, "default": "",
             "help": "Account of WandB"},
+        {"name": "--wandb_group", "type": str, "default": "",
+            "help": "Choose a group name"},
         {"name": "--wandb_project", "type": str, "default": "bi-dexhands",
             "help": "Choose a project name"},
         {"name": "--record_video", "type": bool, "default": False,

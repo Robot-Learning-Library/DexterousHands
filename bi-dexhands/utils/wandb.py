@@ -3,6 +3,7 @@ import wandb
 def init_wandb(args):
     wandb.init(
         project=args.wandb_project,
+        group=args.wandb_group,
         entity=args.wandb_entity,
         sync_tensorboard=True,
         config=vars(args),
