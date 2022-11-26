@@ -47,6 +47,8 @@ import matplotlib.pyplot as plt
 from PIL import Image as Im
 import cv2
 
+from einops import rearrange
+
 class AllegroHandLego(BaseTask):
 
     def __init__(self, cfg, sim_params, physics_engine, device_type, device_id, headless, agent_index=[[[0, 1, 2, 3, 4, 5]], [[0, 1, 2, 3, 4, 5]]], is_multi_agent=False):
@@ -72,6 +74,7 @@ class AllegroHandLego(BaseTask):
         self.fall_dist = self.cfg["env"]["fallDistance"]
         self.fall_penalty = self.cfg["env"]["fallPenalty"]
         self.rot_eps = self.cfg["env"]["rotEps"]
+        self.hand_reset_step = self.cfg["env"]["handResetStep"]
 
         self.vel_obs_scale = 0.2  # scale factor of velocity based observations
         self.force_torque_obs_scale = 10.0  # scale factor of velocity based observations
@@ -150,16 +153,16 @@ class AllegroHandLego(BaseTask):
             "full": 72,
             "full_state": 88,
             "full_contact": 90,
-            "partial_contact": 75 + 192*256*4
+            "partial_contact": 62 + 128*128*4
         }
 
-        self.num_obs_dict = {
-            "full_no_vel": 50,
-            "full": 72,
-            "full_state": 88,
-            "full_contact": 90,
-            "partial_contact": 75
-        }
+        # self.num_obs_dict = {
+        #     "full_no_vel": 50,
+        #     "full": 72,
+        #     "full_state": 88,
+        #     "full_contact": 90,
+        #     "partial_contact": 60
+        # }
         self.up_axis = 'z'
 
         self.use_vel_obs = False
@@ -168,13 +171,13 @@ class AllegroHandLego(BaseTask):
 
         num_states = 0
         if self.asymmetric_obs:
-            num_states = 95
+            num_states = 108 + 128*128*4
 
         self.one_frame_num_obs = self.num_obs_dict[self.obs_type]
         self.one_frame_num_states = num_states
         self.cfg["env"]["numObservations"] = self.num_obs_dict[self.obs_type] * self.stack_obs
         self.cfg["env"]["numStates"] = num_states * self.stack_obs
-        self.cfg["env"]["numActions"] = 23
+        self.cfg["env"]["numActions"] = 19
 
         self.cfg["device_type"] = device_type
         self.cfg["device_id"] = device_id
@@ -227,7 +230,7 @@ class AllegroHandLego(BaseTask):
         self.num_bodies = self.rigid_body_states.shape[1]
 
         self.root_state_tensor = gymtorch.wrap_tensor(actor_root_state_tensor).view(-1, 13)
-
+        self.all_lego_brick_pos_tensors = []
         # self.contact_tensor = gymtorch.wrap_tensor(contact_tensor).view(self.num_envs, -1)
         # print("Contact Tensor Dimension", self.contact_tensor.shape)
 
@@ -264,10 +267,13 @@ class AllegroHandLego(BaseTask):
         self.hand_base_rigid_body_index = self.gym.find_actor_rigid_body_index(self.envs[0], self.hand_indices[0], "base_link", gymapi.DOMAIN_ENV)
         print("hand_base_rigid_body_index: ", self.hand_base_rigid_body_index)
 
+        self.hand_pos_history = torch.zeros((self.num_envs, self.max_episode_length, 3), dtype=torch.float, device=self.device)
+
     def create_sim(self):
         self.dt = self.sim_params.dt
         self.up_axis_idx = self.set_sim_params_up_axis(self.sim_params, self.up_axis)
-        self.sim_params.physx.max_gpu_contact_pairs = int(self.sim_params.physx.max_gpu_contact_pairs * 2)
+        self.sim_params.physx.max_gpu_contact_pairs = int(self.sim_params.physx.max_gpu_contact_pairs * 4)
+        # self.sim_params.dt = 1./120.
 
         self.sim = super().create_sim(self.device_id, self.graphics_device_id, self.physics_engine, self.sim_params)
         self._create_ground_plane()
@@ -339,14 +345,15 @@ class AllegroHandLego(BaseTask):
             robot_dof_props['driveMode'][i] = gymapi.DOF_MODE_POS
             if i < 7:
                 robot_dof_props['velocity'][i] = 3.0
+                robot_dof_props['stiffness'][i] = 400.0
             else:
                 robot_dof_props['velocity'][i] = 3.0
-            robot_dof_props['friction'][i] = 0.02
-            robot_dof_props['stiffness'][i] = 10
-            robot_dof_props['armature'][i] = 0.001
+                robot_dof_props['friction'][i] = 0.02
+                robot_dof_props['stiffness'][i] = 10
+                robot_dof_props['armature'][i] = 0.001
 
             if i < 7:
-                robot_dof_props['damping'][i] = 0.1
+                robot_dof_props['damping'][i] = 10
             else:
                 robot_dof_props['damping'][i] = 0.2
             robot_lower_qpos.append(robot_dof_props['lower'][i])
@@ -463,7 +470,7 @@ class AllegroHandLego(BaseTask):
 
         lego_assets = []
         lego_start_poses = []
-        self.segmentation_id = 200
+        self.segmentation_id = 150
 
         for n in range(3):
             for i, lego_file_name in enumerate(all_lego_files_name):
@@ -477,10 +484,14 @@ class AllegroHandLego(BaseTask):
                 # lego_asset_options.vhacd_params = gymapi.VhacdParams()
                 # lego_asset_options.vhacd_params.resolution = 50000
                 # lego_asset_options.default_dof_drive_mode = gymapi.DOF_MODE_NONE
+                lego_asset_options.density = 1000
                 lego_asset = self.gym.load_asset(self.sim, asset_root, lego_path + lego_file_name, lego_asset_options)
 
                 lego_start_pose = gymapi.Transform()
-                lego_start_pose.p = gymapi.Vec3(-0.15 + 0.1 * int(i % 4) + 0.1, -0.25 + 0.1 * int(i % 24 / 4), 0.62 + 0.15 * int(i / 24) + n * 0.2)
+                if n > 0:
+                    lego_start_pose.p = gymapi.Vec3(-0.15 + 0.1 * int(i % 4) + 0.1, -0.25 + 0.1 * int(i % 24 / 4), 0.62 + 0.15 * int(i / 24) + n * 0.2 + 0.2)
+                else:
+                    lego_start_pose.p = gymapi.Vec3(-0.15 + 0.1 * int(i % 4) + 0.1, -0.25 + 0.1 * int(i % 24 / 4), 0.62 + 0.15 * int(i / 24) + n * 0.2)
                 lego_start_pose.r = gymapi.Quat().from_euler_zyx(0.785, 0.785, 0.0)
                 # Assets visualization
                 # lego_start_pose.p = gymapi.Vec3(-0.15 + 0.2 * int(i % 18) + 0.1, 0, 0.62 + 0.2 * int(i / 18) + n * 0.8 + 5.0)
@@ -520,12 +531,11 @@ class AllegroHandLego(BaseTask):
         self.camera_proj_matrixs = []
 
         self.camera_props = gymapi.CameraProperties()
-        self.camera_props.width = 256
-        self.camera_props.height = 192
+        self.camera_props.width = 128
+        self.camera_props.height = 128
         self.camera_props.enable_tensors = True
 
         self.env_origin = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float)
-        self.pointCloudDownsampleNum = 768
         self.camera_u = torch.arange(0, self.camera_props.width, device=self.device)
         self.camera_v = torch.arange(0, self.camera_props.height, device=self.device)
 
@@ -578,7 +588,7 @@ class AllegroHandLego(BaseTask):
             
             table_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, table_handle)
             for object_shape_prop in table_shape_props:
-                object_shape_prop.friction = 0.2
+                object_shape_prop.friction = 1
             self.gym.set_actor_rigid_shape_properties(env_ptr, table_handle, table_shape_props)
 
             # add box
@@ -592,6 +602,7 @@ class AllegroHandLego(BaseTask):
                 self.gym.set_rigid_body_color(env_ptr, box_handle, 0, gymapi.MESH_VISUAL, gymapi.Vec3(0.8, 0.4, 0))
 
             # add lego
+            color_map = [[1, 1, 1], [0, 0, 0], [1, 1, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0], [1, 0, 1], [1, 0, 0]]
             lego_idx = []
             for lego_i, lego_asset in enumerate(lego_assets):
                 lego_handle = self.gym.create_actor(env_ptr, lego_asset, lego_start_poses[lego_i], "lego_{}".format(lego_i), i, 0, lego_i)
@@ -600,19 +611,18 @@ class AllegroHandLego(BaseTask):
                                             lego_start_poses[lego_i].r.x, lego_start_poses[lego_i].r.y, lego_start_poses[lego_i].r.z, lego_start_poses[lego_i].r.w,
                                             0, 0, 0, 0, 0, 0])
                 idx = self.gym.get_actor_index(env_ptr, lego_handle, gymapi.DOMAIN_SIM)
-                if i == 0 and lego_i == self.segmentation_id:
-                    self.lego_segmentation_index = self.gym.get_actor_index(env_ptr, lego_handle, gymapi.DOMAIN_SIM)
+                if lego_i == self.segmentation_id:
+                    self.lego_segmentation_indices.append(idx)
+
                 lego_idx.append(idx)
 
-                colorx = random.uniform(0, 1)
-                colory = random.uniform(0, 1)
-                colorz = random.uniform(0, 1)
-                self.gym.set_rigid_body_color(env_ptr, lego_handle, 0, gymapi.MESH_VISUAL, gymapi.Vec3(colorx, colory, colorz))
+                color = color_map[lego_i % 8]
+                self.gym.set_rigid_body_color(env_ptr, lego_handle, 0, gymapi.MESH_VISUAL, gymapi.Vec3(color[0], color[1], color[2]))
             self.lego_indices.append(lego_idx)
 
             if self.enable_camera_sensors:
                 camera_handle = self.gym.create_camera_sensor(env_ptr, self.camera_props)
-                self.gym.set_camera_location(camera_handle, env_ptr, gymapi.Vec3(0.35, 0, 1.2), gymapi.Vec3(-0.25, 0, 0))
+                self.gym.set_camera_location(camera_handle, env_ptr, gymapi.Vec3(0.2, 0, 1.1), gymapi.Vec3(0.0, 0, 0))
                 camera_tensor = self.gym.get_camera_image_gpu_tensor(self.sim, env_ptr, camera_handle, gymapi.IMAGE_COLOR)
                 torch_cam_tensor = gymtorch.wrap_tensor(camera_tensor)
                 camera_seg_tensor = self.gym.get_camera_image_gpu_tensor(self.sim, env_ptr, camera_handle, gymapi.IMAGE_SEGMENTATION)
@@ -647,18 +657,20 @@ class AllegroHandLego(BaseTask):
             self.envs.append(env_ptr)
             self.arm_hands.append(arm_hand_actor)
 
-        self.camera_rgbd_image_tensors = torch.stack(self.camera_tensors, dim=0)[:, :, :, :3].reshape(self.num_envs, -1)
-        self.camera_seg_image_tensors = ((torch.stack(self.camera_seg_tensors, dim=0) == self.segmentation_id) * 255).reshape(self.num_envs, -1)
-        self.emergence_reward = torch.zeros_like(self.reset_buf, device=self.device, dtype=torch.float)
-        self.emergence_pixel = torch.zeros_like(self.reset_buf, device=self.device, dtype=torch.float)
-        self.last_emergence_pixel = torch.zeros_like(self.reset_buf, device=self.device, dtype=torch.float)
+        self.camera_rgbd_image_tensors = torch.stack(self.camera_tensors, dim=0).view(self.num_envs, -1)
+        self.camera_seg_image_tensors = ((torch.stack(self.camera_seg_tensors, dim=0) == self.segmentation_id) * 255).view(self.num_envs, -1)
+        self.emergence_reward = torch.zeros_like(self.rew_buf, device=self.device, dtype=torch.float)
+        self.emergence_pixel = torch.zeros_like(self.rew_buf, device=self.device, dtype=torch.float)
+        self.last_emergence_pixel = torch.zeros_like(self.rew_buf, device=self.device, dtype=torch.float)
+
+        self.heap_movement_penalty= torch.zeros_like(self.rew_buf, device=self.device, dtype=torch.float)
+
         # Acquire specific links.
         sensor_handles = [self.gym.find_actor_rigid_body_handle(env_ptr, arm_hand_actor, sensor_name) for sensor_name in
                           self.contact_sensor_names]
         self.sensor_handle_indices = to_torch(sensor_handles, dtype=torch.int64)
 
         self.fingertip_handles = [self.gym.find_actor_rigid_body_handle(env_ptr, arm_hand_actor, name) for name in self.fingertip_names]
-        print(self.fingertip_handles)
         object_rb_props = self.gym.get_actor_rigid_body_properties(env_ptr, object_handle)
         self.object_rb_masses = [prop.mass for prop in object_rb_props]
 
@@ -678,18 +690,20 @@ class AllegroHandLego(BaseTask):
         self.object_indices = to_torch(self.object_indices, dtype=torch.long, device=self.device)
         self.goal_object_indices = to_torch(self.goal_object_indices, dtype=torch.long, device=self.device)
         self.lego_indices = to_torch(self.lego_indices, dtype=torch.long, device=self.device)
+        self.lego_segmentation_indices = to_torch(self.lego_segmentation_indices, dtype=torch.long, device=self.device)
 
     def compute_reward(self, actions):
         self.rew_buf[:], self.reset_buf[:], self.reset_goal_buf[:], self.progress_buf[:], self.successes[:], self.consecutive_successes[:] = compute_hand_reward(
-            torch.tensor(self.spin_coef).to(self.device), self.rew_buf, self.reset_buf, self.reset_goal_buf, self.progress_buf, self.successes, self.consecutive_successes,
-            self.max_episode_length, self.object_pos, self.object_rot, self.object_angvel, self.goal_pos, self.goal_rot, self.segmentation_target_pos, self.hand_base_pos, self.emergence_reward, self.arm_hand_ff_pos, self.arm_hand_rf_pos, self.arm_hand_mf_pos, self.arm_hand_th_pos,
+            torch.tensor(self.spin_coef).to(self.device), self.rew_buf, self.reset_buf, self.reset_goal_buf, self.progress_buf, self.successes, self.consecutive_successes, self.hand_reset_step,
+            self.max_episode_length, self.object_pos, self.object_rot, self.object_angvel, self.goal_pos, self.goal_rot, self.segmentation_target_pos, self.hand_base_pos, self.emergence_reward, self.arm_hand_ff_pos, self.arm_hand_rf_pos, self.arm_hand_mf_pos, self.arm_hand_th_pos, self.heap_movement_penalty,
             self.dist_reward_scale, self.rot_reward_scale, self.rot_eps, self.actions, self.action_penalty_scale,
             self.success_tolerance, self.reach_goal_bonus, self.fall_dist, self.fall_penalty, self.rotation_id,
             self.max_consecutive_successes, self.av_factor, (self.object_type == "pen")
         )
 
-        # self.extras['successes'] = self.successes
-        # self.extras['consecutive_successes'] = self.consecutive_successes.mean()
+        self.extras['emergence_reward'] = self.emergence_reward
+        self.extras['heap_movement_penalty'] = self.heap_movement_penalty
+
         self.total_steps += 1
         # print("Total epoch = {}".format(int(self.total_steps/8)))
 
@@ -713,21 +727,61 @@ class AllegroHandLego(BaseTask):
         self.gym.refresh_jacobian_tensors(self.sim)
 
         # if self.enable_camera_sensors:
-        # if self.enable_camera_sensors and self.progress_buf[0] >= self.max_episode_length - 1:
-        if self.enable_camera_sensors and self.progress_buf[0] % 20 == 1:
+        if self.enable_camera_sensors and self.progress_buf[0] % self.hand_reset_step == 0 and self.progress_buf[0] != 0:
+            pos = self.arm_hand_default_dof_pos #+ self.reset_dof_pos_noise * rand_delta
+            self.arm_hand_dof_pos[:, 0:23] = pos[0:23]
+            self.arm_hand_dof_vel[:, :] = self.arm_hand_dof_default_vel #+ \
+            #     #self.reset_dof_vel_noise * rand_floats[:, 5+self.num_arm_hand_dofs:5+self.num_arm_hand_dofs*2]
+            self.prev_targets[:, :self.num_arm_hand_dofs] = pos
+            self.cur_targets[:, :self.num_arm_hand_dofs] = pos
+            self.gym.set_dof_position_target_tensor_indexed(self.sim,
+                                                            gymtorch.unwrap_tensor(self.prev_targets),
+                                                            gymtorch.unwrap_tensor(self.hand_indices.to(torch.int32)), self.num_envs)
+
+            self.gym.set_dof_state_tensor_indexed(self.sim,
+                                                gymtorch.unwrap_tensor(self.dof_state),
+                                                gymtorch.unwrap_tensor(self.hand_indices.to(torch.int32)), self.num_envs)
+            for i in range(10):
+                self.render()
+                self.gym.simulate(self.sim)
+            self.gym.fetch_results(self.sim, True)
+
+            self.gym.refresh_dof_state_tensor(self.sim)
+            self.gym.refresh_actor_root_state_tensor(self.sim)
+            self.gym.refresh_rigid_body_state_tensor(self.sim)
+            self.gym.refresh_jacobian_tensors(self.sim)
+
             self.gym.render_all_camera_sensors(self.sim)
             self.gym.start_access_image_tensors(self.sim)
 
-            # camera_rgba_image = self.camera_visulization(env_id=0, is_depth_image=False)
-            camera_rgba_image = self.camera_segmentation_visulization(self.camera_tensors, self.camera_seg_tensors, env_id=0, is_depth_image=False)
+            camera_rgba_image = self.camera_rgb_visulization(self.camera_tensors, env_id=0, is_depth_image=False)
+            camera_seg_image = self.camera_segmentation_visulization(self.camera_tensors, self.camera_seg_tensors, env_id=0, is_depth_image=False)
+    
             self.compute_emergence_reward(self.camera_tensors, self.camera_seg_tensors, segmentation_id=self.segmentation_id)
-            # self.camera_rgbd_image_tensors = torch.stack(self.camera_tensors, dim=0)[:, :, :, :3].reshape(self.num_envs, -1)
-            # self.camera_seg_image_tensors = ((torch.stack(self.camera_seg_tensors, dim=0) == self.segmentation_id) * 255).reshape(self.num_envs, -1)
+            self.all_lego_brick_pos = self.root_state_tensor[self.lego_indices[:], 0:3].clone()
+            self.compute_heap_movement_penalty(self.all_lego_brick_pos, self.last_all_lego_brick_pos)
 
-            cv2.imshow("Tracking", camera_rgba_image)
+            self.camera_rgbd_image_tensors = torch.stack(self.camera_tensors, dim=0).view(self.num_envs, -1)
+            self.camera_seg_image_tensors = ((torch.stack(self.camera_seg_tensors, dim=0) == self.segmentation_id) * 255).view(self.num_envs, -1)
+            cv2.namedWindow("DEBUG_RGB_VIS", 0)
+            cv2.namedWindow("DEBUG_SEG_VIS", 0)
+
+            cv2.imshow("DEBUG_RGB_VIS", camera_rgba_image)
+            cv2.imshow("DEBUG_SEG_VIS", camera_seg_image)
             cv2.waitKey(1)
 
-            self.gym.end_access_image_tensors(self.sim)
+            self.arm_hand_dof_pos[:, 0:23] = self.arm_hand_prepare_dof_pos
+            self.prev_targets[:, :self.num_arm_hand_dofs] = self.arm_hand_prepare_dof_pos
+            self.cur_targets[:, :self.num_arm_hand_dofs] = self.arm_hand_prepare_dof_pos
+
+            self.gym.set_dof_position_target_tensor_indexed(self.sim,
+                                                            gymtorch.unwrap_tensor(self.prev_targets),
+                                                            gymtorch.unwrap_tensor(self.hand_indices.to(torch.int32)), self.num_envs)
+
+            self.gym.set_dof_state_tensor_indexed(self.sim,
+                                                gymtorch.unwrap_tensor(self.dof_state),
+                                                gymtorch.unwrap_tensor(self.hand_indices.to(torch.int32)), self.num_envs)
+
 
         self.object_pose = self.root_state_tensor[self.object_indices, 0:7]
         self.object_pos = self.root_state_tensor[self.object_indices, 0:3]
@@ -743,9 +797,11 @@ class AllegroHandLego(BaseTask):
         self.hand_base_pos = self.rigid_body_states[:, self.hand_base_rigid_body_index, 0:3]
         self.hand_base_rot = self.rigid_body_states[:, self.hand_base_rigid_body_index, 3:7]
 
-        self.segmentation_target_pose = self.rigid_body_states[:, self.lego_segmentation_index, 0:7]
-        self.segmentation_target_pos = self.rigid_body_states[:, self.lego_segmentation_index, 0:3]
-        self.segmentation_target_rot = self.rigid_body_states[:, self.lego_segmentation_index, 3:7]
+        self.hand_pos_history[:, self.progress_buf[0] - 1, :] = self.hand_base_pos.clone()
+
+        self.segmentation_target_pose = self.root_state_tensor[self.lego_segmentation_indices, 0:7]
+        self.segmentation_target_pos = self.root_state_tensor[self.lego_segmentation_indices, 0:3]
+        self.segmentation_target_rot = self.root_state_tensor[self.lego_segmentation_indices, 3:7]
 
         self.arm_hand_ff_pos = self.rigid_body_states[:, self.fingertip_handles[0], 0:3]
         self.arm_hand_ff_rot = self.rigid_body_states[:, self.fingertip_handles[0], 3:7]
@@ -778,34 +834,71 @@ class AllegroHandLego(BaseTask):
         if self.asymmetric_obs:
             self.compute_contact_asymmetric_observations()
 
+        if self.enable_camera_sensors and self.progress_buf[0] % self.hand_reset_step == 0 and self.progress_buf[0] != 0:
+            self.gym.end_access_image_tensors(self.sim)
+
     def compute_contact_asymmetric_observations(self):
             self.states_buf[:, 0:23] = unscale(self.arm_hand_dof_pos[:, 0:23],
                                                                 self.arm_hand_dof_lower_limits[0:23],
                                                                 self.arm_hand_dof_upper_limits[0:23])
             self.states_buf[:, 23:46] = self.vel_obs_scale * self.arm_hand_dof_vel[:, 0:23]
 
-            self.states_buf[:, 56:79] = self.actions
-            self.states_buf[:, 79:86] = self.hand_base_pose
+            self.states_buf[:, 46:49] = self.arm_hand_ff_pos
+            self.states_buf[:, 49:52] = self.arm_hand_rf_pos
+            self.states_buf[:, 52:55] = self.arm_hand_mf_pos
+            self.states_buf[:, 55:58] = self.arm_hand_th_pos
+
+            self.states_buf[:, 58:77] = self.actions
+            self.states_buf[:, 81:88] = self.hand_base_pose
 
             self.states_buf[:, 88:95] = self.segmentation_target_pose
+
+            self.states_buf[:, 95:96] = (self.progress_buf[0]- 1) % self.hand_reset_step
+
+            self.states_buf[:, 96:99] = torch.mean(self.hand_pos_history[:, 0*self.hand_reset_step:1*self.hand_reset_step, :], dim=1, keepdim=False)
+            self.states_buf[:, 99:102] = torch.mean(self.hand_pos_history[:, 1*self.hand_reset_step:2*self.hand_reset_step, :], dim=1, keepdim=False)
+            self.states_buf[:, 102:105] = torch.mean(self.hand_pos_history[:, 2*self.hand_reset_step:3*self.hand_reset_step, :], dim=1, keepdim=False)
+            self.states_buf[:, 105:108] = torch.mean(self.hand_pos_history[:, 3*self.hand_reset_step:4*self.hand_reset_step, :], dim=1, keepdim=False)
+
+            self.states_buf[:, 108:128*128*4 + 108] = self.camera_rgbd_image_tensors
+            self.states_buf[:, 128*128*3 + 108:128*128*4 + 108] = self.camera_seg_image_tensors
 
     def compute_contact_observations(self, full_contact=True):
         self.obs_buf[:, 0:23] = unscale(self.arm_hand_dof_pos[:,0:23],
                                                             self.arm_hand_dof_lower_limits[0:23],
                                                             self.arm_hand_dof_upper_limits[0:23])
         # self.obs_buf[:, 16:23] = self.goal_pose
-        self.obs_buf[:, 23:46] = self.actions
+        self.obs_buf[:, 23:42] = self.actions
 
-        self.obs_buf[:, 61:68] = self.hand_base_pose
-        self.obs_buf[:, 68:75] = self.segmentation_target_pose
-        # self.obs_buf[:, 68:75] = self.object_pose_for_open_loop
+        self.obs_buf[:, 42:49] = self.hand_base_pose
 
-        # self.obs_buf[:, 75:192*256*3 + 75] = self.camera_rgbd_image_tensors
-        # self.obs_buf[:, 192*256*3 + 75:192*256*4 + 75] = self.camera_seg_image_tensors
+        self.obs_buf[:, 49:50] = (self.progress_buf[0] - 1) % self.hand_reset_step
+
+        self.obs_buf[:, 50:53] = torch.mean(self.hand_pos_history[:, 0*self.hand_reset_step:1*self.hand_reset_step, :], dim=1, keepdim=False)
+        self.obs_buf[:, 53:56] = torch.mean(self.hand_pos_history[:, 1*self.hand_reset_step:2*self.hand_reset_step, :], dim=1, keepdim=False)
+        self.obs_buf[:, 56:59] = torch.mean(self.hand_pos_history[:, 2*self.hand_reset_step:3*self.hand_reset_step, :], dim=1, keepdim=False)
+        self.obs_buf[:, 59:62] = torch.mean(self.hand_pos_history[:, 3*self.hand_reset_step:4*self.hand_reset_step, :], dim=1, keepdim=False)
+
+        # for i in range(self.num_envs):
+        self.obs_buf[:, 62:128*128*4 + 62] = self.camera_rgbd_image_tensors
+        self.obs_buf[:, 128*128*3 + 62:128*128*4 + 62] = self.camera_seg_image_tensors
+
+        # print(torch.count_nonzero(self.camera_rgbd_image_tensors).item())
+        # x2 = self.obs_buf[:, 62:128*128*4 + 62].reshape(self.num_envs, 128, 128, 4)
+        # x1 = self.camera_tensors[2]
+        # camera_image = x1.cpu().numpy()
+        # camera_image = cv2.cvtColor(camera_image, cv2.COLOR_BGR2RGB)
+
+        # camera_image2 = x2[2].cpu().numpy()
+        # camera_image2 = cv2.cvtColor(camera_image2, cv2.COLOR_BGR2RGB)
+
+        # cv2.namedWindow("DEBUG_X1_VIS", 0)
+        # cv2.imshow("DEBUG_X1_VIS", camera_image)
+        # cv2.namedWindow("DEBUG_X2_VIS", 0)
+        # cv2.imshow("DEBUG_X2_VIS", camera_image2)
+        # cv2.waitKey(1)
 
     def reset_target_pose(self, env_ids, apply_reset=False):
-        # if int(self.total_steps/8) % 1000 == 0:
-        #     torch.save(self.contact_slamer.state_dict(), "/home/jmji/isaacgym_rl/contact_slamer/ArmRotationLatentVectorStudent/model_{}.pt".format(int(self.total_steps/8)))
         rand_floats_x = torch_rand_float(-1, 1, (len(env_ids), 4), device=self.device)
         rand_floats_y = torch_rand_float(-1, 1, (len(env_ids), 4), device=self.device)
 
@@ -850,27 +943,17 @@ class AllegroHandLego(BaseTask):
         self.root_state_tensor[self.object_indices[env_ids], self.up_axis_idx] = self.object_init_state[env_ids, self.up_axis_idx] + \
             self.reset_position_noise * rand_floats[:, self.up_axis_idx]
 
-        if self.obs_type == "full_contact" or "partial_contact":
-            new_object_rot = randomize_rotation(torch.zeros_like(rand_floats[:, 3]),
-                                                torch.zeros_like(rand_floats[:, 4]),
-                                                self.x_unit_tensor[env_ids], self.y_unit_tensor[env_ids])
-        else:
-            new_object_rot = randomize_rotation(rand_floats[:, 3], rand_floats[:, 4], self.x_unit_tensor[env_ids],
-                                                self.y_unit_tensor[env_ids])
-
-        if self.object_type == "pen":
-            rand_angle_y = torch.tensor(0.3)
-            new_object_rot = randomize_rotation_pen(rand_floats[:, 3], rand_floats[:, 4], rand_angle_y,
-                                                    self.x_unit_tensor[env_ids],
-                                                    self.y_unit_tensor[env_ids],
-                                                    self.z_unit_tensor[env_ids])
-
         self.root_state_tensor[self.object_indices[env_ids], 3:7] = self.object_init_state[env_ids, 3:7].clone()
         self.root_state_tensor[self.object_indices[env_ids], 7:13] = torch.zeros_like(self.root_state_tensor[self.object_indices[env_ids], 7:13])
         self.object_pose_for_open_loop[env_ids] = self.root_state_tensor[self.object_indices[env_ids], 0:7].clone()
 
         self.root_state_tensor[self.lego_indices[env_ids].view(-1), 0:7] = self.lego_init_states[env_ids].view(-1, 13)[:, 0:7].clone()
         self.root_state_tensor[self.lego_indices[env_ids].view(-1), 7:13] = torch.zeros_like(self.root_state_tensor[self.lego_indices[env_ids].view(-1), 7:13])
+
+        # randomize segmentation object
+        self.root_state_tensor[self.lego_segmentation_indices[env_ids], 0] = rand_floats[env_ids, 0] * 0.15
+        self.root_state_tensor[self.lego_segmentation_indices[env_ids], 1] = rand_floats[env_ids, 1] * 0.25
+        self.root_state_tensor[self.lego_segmentation_indices[env_ids], 2] = 0.82
 
         object_indices = torch.unique(torch.cat([self.object_indices[env_ids],
                                                  self.goal_object_indices[env_ids],
@@ -908,32 +991,40 @@ class AllegroHandLego(BaseTask):
 
         self.post_reset(env_ids, hand_indices)
 
+        self.hand_pos_history = torch.zeros_like(self.hand_pos_history)
         self.progress_buf[env_ids] = 0
         self.reset_buf[env_ids] = 0
         self.successes[env_ids] = 0
 
     def post_reset(self, env_ids, hand_indices):
         # step physics and render each frame
-        for i in range(30):
+        for i in range(50):
             self.render()
             self.gym.simulate(self.sim)
 
+        self.gym.fetch_results(self.sim, True)
         if self.enable_camera_sensors:
+            self.gym.refresh_dof_state_tensor(self.sim)
+            self.gym.refresh_actor_root_state_tensor(self.sim)
+            self.gym.refresh_rigid_body_state_tensor(self.sim)
+            self.gym.refresh_jacobian_tensors(self.sim)
             self.gym.render_all_camera_sensors(self.sim)
             self.gym.start_access_image_tensors(self.sim)
 
-            # camera_rgba_image = self.camera_visulization(env_id=0, is_depth_image=False)
-            camera_rgba_image = self.camera_segmentation_visulization(self.camera_tensors, self.camera_seg_tensors, env_id=0, is_depth_image=False)
-            # self.compute_emergence_reward(self.camera_tensors, self.camera_seg_tensors, segmentation_id=self.segmentation_id)
+            camera_rgba_image = self.camera_rgb_visulization(self.camera_tensors, env_id=0, is_depth_image=False)
+            camera_seg_image = self.camera_segmentation_visulization(self.camera_tensors, self.camera_seg_tensors, env_id=0, is_depth_image=False)
 
-            self.camera_rgbd_image_tensors = torch.stack(self.camera_tensors, dim=0)[:, :, :, :3].reshape(self.num_envs, -1)
-            self.camera_seg_image_tensors = ((torch.stack(self.camera_seg_tensors, dim=0) == self.segmentation_id) * 255).reshape(self.num_envs, -1)
+            self.compute_emergence_reward(self.camera_tensors, self.camera_seg_tensors, segmentation_id=self.segmentation_id)
+            self.last_all_lego_brick_pos = self.root_state_tensor[self.lego_indices[:], 0:3].clone()
 
-            for i in range(self.num_envs):
-                torch_seg_tensor = self.camera_seg_tensors[i]
-                self.last_emergence_pixel[i] = torch_seg_tensor[torch_seg_tensor == self.segmentation_id].shape[0]
-            # cv2.imshow("Tracking", camera_rgba_image)
-            # cv2.waitKey(1)
+            self.camera_rgbd_image_tensors = torch.stack(self.camera_tensors, dim=0).view(self.num_envs, -1)
+            self.camera_seg_image_tensors = ((torch.stack(self.camera_seg_tensors, dim=0) == self.segmentation_id) * 255).view(self.num_envs, -1)
+            cv2.namedWindow("DEBUG_RGB_VIS", 0)
+            cv2.namedWindow("DEBUG_SEG_VIS", 0)
+
+            cv2.imshow("DEBUG_RGB_VIS", camera_rgba_image)
+            cv2.imshow("DEBUG_SEG_VIS", camera_seg_image)
+            cv2.waitKey(1)
 
             self.gym.end_access_image_tensors(self.sim)
 
@@ -975,7 +1066,7 @@ class AllegroHandLego(BaseTask):
                                                                           self.arm_hand_dof_lower_limits[self.actuated_dof_indices],
                                                                           self.arm_hand_dof_upper_limits[self.actuated_dof_indices])
         else:
-            self.cur_targets[:, self.actuated_dof_indices] = scale(self.actions[:, 7:23],
+            self.cur_targets[:, self.actuated_dof_indices] = scale(self.actions[:, 3:19],
                                                                    self.arm_hand_dof_lower_limits[self.actuated_dof_indices],
                                                                    self.arm_hand_dof_upper_limits[self.actuated_dof_indices])
             self.cur_targets[:, self.actuated_dof_indices] = self.act_moving_average * self.cur_targets[:,
@@ -999,7 +1090,7 @@ class AllegroHandLego(BaseTask):
             # IK control robotic arm
             # target_pos = to_torch([0.05, 0.0, 0.95], device=self.device).repeat((self.num_envs, 1))
             # pos_err = target_pos - self.rigid_body_states[:, self.hand_base_rigid_body_index, 0:3].clone()
-            pos_err = self.actions[:, 3:6] * 0.05
+            pos_err = self.actions[:, 0:3] * 0.05
 			# target_rot = actions[:, 3:7] / torch.sqrt((actions[:, 3:7]**2).sum(dim=-1)+1e-8).view(-1, 1)
             target_euler = to_torch([0.0, 1.571, 0], device=self.device).repeat((self.num_envs, 1))
             target_rot = quat_from_euler_xyz(target_euler[:, 0], target_euler[:, 1], target_euler[:, 2])
@@ -1036,6 +1127,7 @@ class AllegroHandLego(BaseTask):
 
         self.compute_observations()
         self.compute_reward(self.actions)
+        # self.add_debug_lines(self.envs[0], self.segmentation_target_pos[0], self.segmentation_target_rot[0])
 
         if self.viewer and self.debug_viz:
             # draw axes on target object
@@ -1056,21 +1148,10 @@ class AllegroHandLego(BaseTask):
         self.gym.add_lines(self.viewer, env, 1, [p0[0], p0[1], p0[2], posy[0], posy[1], posy[2]], [0.1, 0.85, 0.1])
         self.gym.add_lines(self.viewer, env, 1, [p0[0], p0[1], p0[2], posz[0], posz[1], posz[2]], [0.1, 0.1, 0.85])
 
-    def camera_visulization(self, env_id=0, is_depth_image=False):
-        if is_depth_image:
-            camera_depth_tensor = self.gym.get_camera_image_gpu_tensor(self.sim, self.envs[env_id], self.cameras[env_id], gymapi.IMAGE_DEPTH)
-            torch_depth_tensor = gymtorch.wrap_tensor(camera_depth_tensor)
-            torch_depth_tensor = torch.clamp(torch_depth_tensor, -1, 1)
-            torch_depth_tensor = scale(torch_depth_tensor, to_torch([0], dtype=torch.float, device=self.device),
-                                                         to_torch([256], dtype=torch.float, device=self.device))
-            camera_image = torch_depth_tensor.cpu().numpy()
-            camera_image = Im.fromarray(camera_image)
-        
-        else:
-            camera_rgba_tensor = self.gym.get_camera_image_gpu_tensor(self.sim, self.envs[env_id], self.cameras[env_id], gymapi.IMAGE_COLOR)
-            torch_rgba_tensor = gymtorch.wrap_tensor(camera_rgba_tensor)
-            camera_image = torch_rgba_tensor.cpu().numpy()
-            camera_image = cv2.cvtColor(camera_image, cv2.COLOR_BGR2RGB)
+    def camera_rgb_visulization(self, camera_tensors, env_id=0, is_depth_image=False):
+        torch_rgba_tensor = camera_tensors[env_id]
+        camera_image = torch_rgba_tensor.cpu().numpy()
+        camera_image = cv2.cvtColor(camera_image, cv2.COLOR_BGR2RGB)
         
         return camera_image
 
@@ -1089,17 +1170,21 @@ class AllegroHandLego(BaseTask):
             torch_seg_tensor = camera_seg_tensors[i]
             self.emergence_pixel[i] = torch_seg_tensor[torch_seg_tensor == segmentation_id].shape[0]
 
-        self.emergence_reward = (self.emergence_pixel - self.last_emergence_pixel)
+        self.emergence_reward = (self.emergence_pixel - self.last_emergence_pixel) / (100 - self.last_emergence_pixel)
         self.last_emergence_pixel = self.emergence_pixel.clone()
 
+    def compute_heap_movement_penalty(self, all_lego_brick_pos, last_all_lego_brick_pos):
+        self.heap_movement_penalty = torch.where(self.emergence_reward < 0.05, torch.mean(torch.norm(all_lego_brick_pos - last_all_lego_brick_pos, p=2, dim=-1), dim=-1, keepdim=False), torch.zeros_like(self.heap_movement_penalty))
+        
+        self.last_all_lego_brick_pos = self.all_lego_brick_pos.clone()
 #####################################################################
 ###=========================jit functions=========================###
 #####################################################################
 
 @torch.jit.script
 def compute_hand_reward(
-    spin_coef, rew_buf, reset_buf, reset_goal_buf, progress_buf, successes, consecutive_successes,
-    max_episode_length: float, object_pos, object_rot, object_angvel, target_pos, target_rot, segmentation_target_pos, hand_base_pos, emergence_reward, arm_hand_ff_pos, arm_hand_rf_pos, arm_hand_mf_pos, arm_hand_th_pos,
+    spin_coef, rew_buf, reset_buf, reset_goal_buf, progress_buf, successes, consecutive_successes, max_hand_reset_length: int,
+    max_episode_length: float, object_pos, object_rot, object_angvel, target_pos, target_rot, segmentation_target_pos, hand_base_pos, emergence_reward, arm_hand_ff_pos, arm_hand_rf_pos, arm_hand_mf_pos, arm_hand_th_pos, heap_movement_penalty,
     dist_reward_scale: float, rot_reward_scale: float, rot_eps: float,
     actions, action_penalty_scale: float,
     success_tolerance: float, reach_goal_bonus: float, fall_dist: float,
@@ -1116,14 +1201,19 @@ def compute_hand_reward(
     action_penalty = torch.sum(actions ** 2, dim=-1)
 
     # Total reward is: position distance + orientation alignment + action regularization + success bonus + fall penalty
-    # emergence_reward = torch.where(arm_hand_finger_dist < 2, 
-    #                     torch.where(progress_buf >= max_episode_length - 1, emergence_reward, torch.zeros_like(emergence_reward)), torch.zeros_like(emergence_reward))
-    emergence_reward = torch.where(arm_hand_finger_dist < 2, emergence_reward, torch.zeros_like(emergence_reward))
-        
-    reward = dist_rew + emergence_reward
-    print(dist_rew[0])
-    print(emergence_reward[0])
-    # print(rot_rew[0])
+    emergence_reward = torch.where(progress_buf % max_hand_reset_length == 0, emergence_reward, torch.zeros_like(emergence_reward))
+    # emergence_reward = torch.where(arm_hand_finger_dist < 2, emergence_reward / 10, torch.zeros_like(emergence_reward))
+
+    # object_up_reward = (segmentation_target_pos[:, 2]-0.5) * 5
+    # dist_rew = torch.where(progress_buf % max_hand_reset_length == 0, dist_rew, torch.zeros_like(dist_rew))
+    heap_movement_penalty = torch.where(progress_buf % max_hand_reset_length == 0, torch.clamp(heap_movement_penalty, min=0, max=0.5), torch.zeros_like(heap_movement_penalty))
+
+    reward = emergence_reward - heap_movement_penalty * 0.0
+    if reward[0] != 0:
+        # print(dist_rew[0])
+        print(emergence_reward[0])
+        print(heap_movement_penalty[0])
+    # print(object_up_reward[0])
     # # print(spin_reward[0])
     # print("----finish----")
 

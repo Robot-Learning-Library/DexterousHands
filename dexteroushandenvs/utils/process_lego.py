@@ -2,7 +2,7 @@
 
 
 def process_lego(args, env, cfg_train, logdir):
-    from algorithms.legorl.ppo import PPO, ActorCritic, ActorCriticCNN, ActorCriticPointCloud
+    from algorithms.legorl.ppo import PPO, ActorCritic, ActorCriticCNN
     learn_cfg = cfg_train["learn"]
     is_testing = learn_cfg["test"]
     # is_testing = True
@@ -13,7 +13,7 @@ def process_lego(args, env, cfg_train, logdir):
 
     logdir = logdir + "_seed{}".format(env.task.cfg["seed"])
 
-    if cfg_train["point_cloud"]["use_point_cloud"] == True:
+    if env.task.cfg["env"]["enable_camera_sensors"] == True:
         actor_critic = ActorCriticCNN
     else:
         actor_critic = ActorCritic
@@ -46,7 +46,7 @@ def process_lego(args, env, cfg_train, logdir):
               asymmetric=(env.num_states > 0)
               )
 
-    # dapg.test("/home/jmji/DexterousHandEnvs/dexteroushandenvs/logs/allegro_hand_catch_underarm/dapg/dapg_seed-1/model_6000.pt")
+    ppo.load("/home/jmji/DexterousHandEnvs/dexteroushandenvs/logs/allegro_hand_lego/lego/lego_seed4/model_2200.pt")
     if is_testing and args.model_dir != "":
         print("Loading model from {}".format(chkpt_path))
         ppo.test(chkpt_path)

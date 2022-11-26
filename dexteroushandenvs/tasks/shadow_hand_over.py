@@ -104,6 +104,7 @@ class ShadowHandOver(BaseTask):
             "point_cloud_for_distill": 398 + self.num_point_cloud_feature_dim * 3,
             "full_state": 398
         }
+        
         self.num_hand_obs = 72 + 95 + 20
         self.up_axis = 'z'
 

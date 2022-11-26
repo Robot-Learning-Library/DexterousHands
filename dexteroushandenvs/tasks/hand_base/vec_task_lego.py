@@ -71,6 +71,9 @@ class LegoVecTask():
 # Python CPU/GPU Class
 class LegoVecTaskPython(LegoVecTask):
 
+    def get_image(self):
+        return self.task.camera_tensors
+
     def get_state(self):
         return torch.clamp(self.task.states_buf, -self.clip_obs, self.clip_obs).to(self.rl_device)
 

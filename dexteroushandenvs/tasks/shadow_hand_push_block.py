@@ -532,7 +532,7 @@ class ShadowHandPushBlock(BaseTask):
     def compute_reward(self, actions):
         self.rew_buf[:], self.reset_buf[:], self.reset_goal_buf[:], self.progress_buf[:], self.successes[:], self.consecutive_successes[:] = compute_hand_reward(
             self.rew_buf, self.reset_buf, self.reset_goal_buf, self.progress_buf, self.successes, self.consecutive_successes,
-            self.max_episode_length, self.object_pos, self.object_rot, self.goal_pos, self.goal_rot, self.block_right_handle_pos, self.block_left_handle_pos, 
+            self.max_episode_length, self.object_pos, self.object_rot, self.left_goal_pos, self.left_goal_rot, self.right_goal_pos, self.right_goal_rot, self.block_right_handle_pos, self.block_left_handle_pos, 
             self.left_hand_pos, self.right_hand_pos, self.right_hand_ff_pos, self.right_hand_mf_pos, self.right_hand_rf_pos, self.right_hand_lf_pos, self.right_hand_th_pos, 
             self.left_hand_ff_pos, self.left_hand_mf_pos, self.left_hand_rf_pos, self.left_hand_lf_pos, self.left_hand_th_pos, 
             self.dist_reward_scale, self.rot_reward_scale, self.rot_eps, self.actions, self.action_penalty_scale,
@@ -624,8 +624,11 @@ class ShadowHandPushBlock(BaseTask):
         self.left_hand_th_rot = self.rigid_body_states[:, 25 + 26, 3:7]
         self.left_hand_th_pos = self.left_hand_th_pos + quat_apply(self.left_hand_th_rot, to_torch([0, 0, 1], device=self.device).repeat(self.num_envs, 1) * 0.02)
 
-        self.goal_pos = to_torch([-0.3, 0, 0.6], dtype=torch.float, device=self.device).repeat((self.num_envs, 1))
-        self.goal_rot = self.goal_states[:, 3:7]
+        self.left_goal_pos = to_torch([-0.3, -0.2, 0.6], dtype=torch.float, device=self.device).repeat((self.num_envs, 1))
+        self.left_goal_rot = self.goal_states[:, 3:7]
+
+        self.right_goal_pos = to_torch([-0.3, 0.2, 0.6], dtype=torch.float, device=self.device).repeat((self.num_envs, 1))
+        self.right_goal_rot = self.goal_states[:, 3:7]
 
         self.fingertip_state = self.rigid_body_states[:, self.fingertip_handles][:, :, 0:13]
         self.fingertip_pos = self.rigid_body_states[:, self.fingertip_handles][:, :, 0:3]
@@ -798,7 +801,6 @@ class ShadowHandPushBlock(BaseTask):
         self.reset_buf[env_ids] = 0
         self.successes[env_ids] = 0
 
-
     def pre_physics_step(self, actions):
         env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         goal_env_ids = self.reset_goal_buf.nonzero(as_tuple=False).squeeze(-1)
@@ -948,11 +950,11 @@ def compute_hand_reward(
     # resets = torch.where(right_hand_dist >= 0.5, torch.ones_like(resets), resets)
     # resets = torch.where(left_hand_dist >= 0.2, torch.ones_like(resets), resets)
 
-    print(right_hand_dist_rew[0])
-    print(left_hand_dist_rew[0])
-    print(up_rew[0])
-
     # Find out which envs hit the goal and update successes count
+    successes = torch.where(successes == 0, 
+                    torch.where(torch.abs(left_goal_dist) <= 0.03, 
+                        torch.where(torch.abs(right_goal_dist) <= 0.03, torch.ones_like(reset_goal_buf), reset_goal_buf), reset_goal_buf), reset_goal_buf)
+
     resets = torch.where(progress_buf >= max_episode_length, torch.ones_like(resets), resets)
 
     goal_resets = torch.zeros_like(resets)

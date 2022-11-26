@@ -78,8 +78,8 @@ def retrieve_cfg(args, use_rlg_config=False):
         return os.path.join(args.logdir, "shadow_hand_re_orientation/{}/{}".format(args.algo, args.algo)), "cfg/{}/re_orientation_config.yaml".format(args.algo), "cfg/shadow_hand_re_orientation.yaml"
     elif args.task == "ShadowHandOverOverarm":
         return os.path.join(args.logdir, "shadow_hand_over_overarm/{}/{}".format(args.algo, args.algo)), "cfg/{}/config.yaml".format(args.algo), "cfg/shadow_hand_over_overarm.yaml"
-    # elif args.task == "ShadowHand":
-    #     return os.path.join(args.logdir, "shadow_hand/{}/{}".format(args.algo, args.algo)), "cfg/{}/config.yaml".format(args.algo), "cfg/shadow_hand.yaml"
+    elif args.task == "ShadowHand":
+        return os.path.join(args.logdir, "shadow_hand/{}/{}".format(args.algo, args.algo)), "cfg/{}/config.yaml".format(args.algo), "cfg/shadow_hand.yaml"
     elif args.task == "OneFrankaCabinet":
         return os.path.join(args.logdir, "franka_cabinet/{}/{}".format(args.algo, args.algo)), "cfg/{}/config.yaml".format(args.algo), "cfg/franka_cabinet.yaml"
     elif args.task == "ShadowHandLiftOverarm":

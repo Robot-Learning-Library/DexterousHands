@@ -296,8 +296,8 @@ class AllegroHandCatchUnderarm2Joint(BaseTask):
             allegro_hand_another_dof_props['stiffness'][i] = 3
             allegro_hand_another_dof_props['armature'][i] = 0.001
             if i < 6:
-                allegro_hand_dof_props['damping'][i] = 100.0
-                allegro_hand_another_dof_props['damping'][i] = 100.0
+                allegro_hand_dof_props['damping'][i] = 100
+                allegro_hand_another_dof_props['damping'][i] = 100
             else:
                 allegro_hand_dof_props['damping'][i] = 0.2
                 allegro_hand_another_dof_props['damping'][i] = 0.2
@@ -730,9 +730,9 @@ class AllegroHandCatchUnderarm2Joint(BaseTask):
         self.reset_buf[env_ids] = 0
         self.successes[env_ids] = 0
 
-        if 1 in env_ids:
-            self.init_object_tracking = True
-            self.gym.clear_lines(self.viewer)
+        # if 1 in env_ids:
+        self.init_object_tracking = True
+        self.gym.clear_lines(self.viewer)
 
     def pre_physics_step(self, actions):
         self.actions = actions.clone().to(self.device)
@@ -766,7 +766,7 @@ class AllegroHandCatchUnderarm2Joint(BaseTask):
 
         #     self.save_right_allegro_hand_dof_vel.append(np.array(self.allegro_hand_dof_vel[0].cpu()))
 
-        traj = np.loadtxt("/home/jmji/DexterousHandEnvs/dexteroushandenvs/trajectory/35_joint_big_1_1000density/right_allegro_hand_dof_pos.txt")
+        # traj = np.loadtxt("/home/jmji/DexterousHandEnvs/dexteroushandenvs/trajectory/35_joint_big_1_1000density/right_allegro_hand_dof_pos.txt")
         env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         goal_env_ids = self.reset_goal_buf.nonzero(as_tuple=False).squeeze(-1)
 
@@ -819,7 +819,7 @@ class AllegroHandCatchUnderarm2Joint(BaseTask):
                                                                           self.allegro_hand_dof_lower_limits[self.actuated_dof_indices + 6], self.allegro_hand_dof_upper_limits[self.actuated_dof_indices + 6])
 
         self.prev_targets[:, :] = self.cur_targets[:, :]
-        self.cur_targets[:, 0:22] = to_torch(traj[self.progress_buf[0]], device=self.device)
+        # self.cur_targets[:, 0:22] = to_torch(traj[self.progress_buf[0]], device=self.device)
         self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.cur_targets))
 
     def post_physics_step(self):

@@ -195,7 +195,7 @@ class ShadowHandLiftUnderarm(BaseTask):
 
         self.reset_goal_buf = self.reset_buf.clone()
         self.successes = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
-        self.consecutive_successes = torch.zeros(1, dtype=torch.float, device=self.device)
+        self.consecutive_successes = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
 
         self.av_factor = to_torch(self.av_factor, dtype=torch.float, device=self.device)
         self.apply_forces = torch.zeros((self.num_envs, self.num_bodies, 3), device=self.device, dtype=torch.float)
@@ -207,6 +207,7 @@ class ShadowHandLiftUnderarm(BaseTask):
     def create_sim(self):
         self.dt = self.sim_params.dt
         self.up_axis_idx = self.set_sim_params_up_axis(self.sim_params, self.up_axis)
+        self.sim_params.physx.max_gpu_contact_pairs = int(self.sim_params.physx.max_gpu_contact_pairs * 4)
 
         self.sim = super().create_sim(self.device_id, self.graphics_device_id, self.physics_engine, self.sim_params)
         self._create_ground_plane()
@@ -349,7 +350,7 @@ class ShadowHandLiftUnderarm(BaseTask):
         if self.object_type == "pen":
             object_start_pose.p.z = shadow_hand_start_pose.p.z + 0.02
 
-        self.goal_displacement = gymapi.Vec3(-0., 0.0, 1.)
+        self.goal_displacement = gymapi.Vec3(-0., 0.0, 0.4)
         self.goal_displacement_tensor = to_torch(
             [self.goal_displacement.x, self.goal_displacement.y, self.goal_displacement.z], device=self.device)
         goal_start_pose = gymapi.Transform()
@@ -631,7 +632,7 @@ class ShadowHandLiftUnderarm(BaseTask):
 
         self.goal_states[env_ids, 0:3] = self.goal_init_state[env_ids, 0:3]
         # self.goal_states[env_ids, 1] -= 0.25
-        self.goal_states[env_ids, 2] += 1.0
+        self.goal_states[env_ids, 2] += 0.4
 
         # self.goal_states[env_ids, 3:7] = new_rot
         self.root_state_tensor[self.goal_object_indices[env_ids], 0:3] = self.goal_states[env_ids, 0:3] + self.goal_displacement_tensor
@@ -881,7 +882,7 @@ def compute_hand_reward(
     up_rew = torch.zeros_like(right_hand_dist_rew)
     up_rew = torch.where(right_hand_dist < 0.08,
                         torch.where(left_hand_dist < 0.08,
-                                        3*(0.985 - goal_dist), up_rew), up_rew)
+                                        3*(0.385 - goal_dist), up_rew), up_rew)
     
     reward = 0.2 - right_hand_dist_rew - left_hand_dist_rew + up_rew
 
@@ -890,6 +891,9 @@ def compute_hand_reward(
     resets = torch.where(left_hand_dist >= 0.2, torch.ones_like(resets), resets)
 
     # Find out which envs hit the goal and update successes count
+    successes = torch.where(successes == 0, 
+                    torch.where(goal_dist < 0.03, torch.ones_like(successes), successes), successes)
+
     resets = torch.where(progress_buf >= max_episode_length, torch.ones_like(resets), resets)
 
     goal_resets = torch.zeros_like(resets)
@@ -897,7 +901,7 @@ def compute_hand_reward(
     num_resets = torch.sum(resets)
     finished_cons_successes = torch.sum(successes * resets.float())
 
-    cons_successes = torch.where(num_resets > 0, av_factor*finished_cons_successes/num_resets + (1.0 - av_factor)*consecutive_successes, consecutive_successes)
+    cons_successes = torch.where(resets > 0, successes * resets, consecutive_successes)
 
     return reward, resets, goal_resets, progress_buf, successes, cons_successes
 

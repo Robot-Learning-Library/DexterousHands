@@ -64,7 +64,7 @@ class PPO:
 
         # PPO components
         self.vec_env = vec_env
-        self.actor_critic = actor_critic_class(self.observation_space.shape, self.state_space.shape, self.action_space.shape,
+        self.actor_critic = actor_critic_class(self.vec_env, self.observation_space.shape, self.state_space.shape, self.action_space.shape,
                                                init_noise_std, model_cfg, asymmetric=asymmetric)
         self.actor_critic.to(self.device)
         self.storage = RolloutStorage(self.vec_env.num_envs, num_transitions_per_env, self.observation_space.shape,

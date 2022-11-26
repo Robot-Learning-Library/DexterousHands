@@ -1,7 +1,7 @@
 # if given, will override the device setting in gym. 
 env: 
   env_name: "allegro_hand_catch_underarm_2joint"
-  numEnvs: 20
+  numEnvs: 1
   envSpacing: 1.25
   episodeLength: 75
   enableDebugVis: False

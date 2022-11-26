@@ -1,9 +1,10 @@
 # if given, will override the device setting in gym. 
 env: 
   env_name: "allegro_hand_lego"
-  numEnvs: 512
+  numEnvs: 256
   envSpacing: 1.25
-  episodeLength: 201
+  episodeLength: 401
+  handResetStep: 100
   enableDebugVis: False
   enable_camera_sensors: True
   aggregateMode: 1
@@ -155,7 +156,7 @@ sim:
   physx:
     num_threads: 64
     solver_type: 1  # 0: pgs, 1: tgs
-    num_position_iterations: 8
+    num_position_iterations: 16
     num_velocity_iterations: 0
     contact_offset: 0.01
     rest_offset: 0.0

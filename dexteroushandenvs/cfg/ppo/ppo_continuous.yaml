@@ -29,7 +29,7 @@ params:
         #scale: 0.001
 
   load_checkpoint: True
-  load_path: runs/AllegroHandCatchUnderarm2Joint_04-11-10-15/nn/AllegroHandCatchUnderarm2Joint.pth
+  load_path: runs/AllegroHandCatchUnderarm2Joint_23-12-46-37/nn/last_AllegroHandCatchUnderarm2Jointep1504rew[23.73].pth
 
   # load_checkpoint: False
   # load_path: path
@@ -53,13 +53,13 @@ params:
     clip_value: True
     num_agent: 1
     horizon_length: 8
-    minibatch_size: 800
+    minibatch_size: 2048
     mini_epochs: 5
     critic_coef: 1
     lr_schedule:  adaptive
     kl_threshold: 0.016
 
-    max_epochs: 1104
+    max_epochs: 1504
     save_frequency: 200
     save_best_after: 200
     games_to_track: 8
@@ -71,7 +71,7 @@ params:
       seed: 42
 
     central_value_config:
-      minibatch_size: 800
+      minibatch_size: 2048
       mini_epochs: 5
       learning_rate: 5e-4
       lr_schedule: adaptive

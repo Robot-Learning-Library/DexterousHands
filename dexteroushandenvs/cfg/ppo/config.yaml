@@ -3,8 +3,6 @@ seed: -1
 clip_observations: 5.0
 clip_actions: 1.0
 
-point_cloud:
-  use_point_cloud: True
 policy: # only works for MlpPolicy right now
   pi_hid_sizes: [1024, 1024, 512]
   vf_hid_sizes: [1024, 1024, 512]

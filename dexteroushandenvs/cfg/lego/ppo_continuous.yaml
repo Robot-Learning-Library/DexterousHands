@@ -29,7 +29,7 @@ params:
         #scale: 0.001
 
   load_checkpoint: True
-  load_path: runs/AllegroHandCatchUnderarm2Joint_04-11-10-15/nn/AllegroHandCatchUnderarm2Joint.pth
+  load_path: runs/AllegroHandLego_19-06-09-07/nn/last_AllegroHandLegoep11040rew[3.43].pth
 
   # load_checkpoint: False
   # load_path: path

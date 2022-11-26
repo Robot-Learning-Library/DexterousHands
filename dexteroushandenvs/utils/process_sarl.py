@@ -13,7 +13,7 @@ def process_ppo(args, env, cfg_train, logdir):
 
     logdir = logdir + "_seed{}".format(env.task.cfg["seed"])
 
-    if cfg_train["point_cloud"]["use_point_cloud"] == True:
+    if env.task.cfg["env"]["observationType"] in ["point_cloud", "point_cloud_for_distill"]:
         actor_critic = ActorCriticPointCloud
     else:
         actor_critic = ActorCritic

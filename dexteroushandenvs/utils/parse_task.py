@@ -13,7 +13,7 @@ from tasks.shadow_hand_two_catch_abreast import ShadowHandTwoCatchAbreast
 from tasks.shadow_hand_catch_abreast import ShadowHandCatchAbreast
 from tasks.shadow_hand_re_orientation import ShadowHandReOrientation
 from tasks.shadow_hand_over_overarm import ShadowHandOverOverarm
-# from tasks.shadow_hand import ShadowHand
+from tasks.shadow_hand import ShadowHand
 # from tasks.franka_cabinet import OneFrankaCabinet
 from tasks.shadow_hand_lift_overarm import ShadowHandLiftOverarm
 from tasks.shadow_hand_lift_underarm import ShadowHandLiftUnderarm

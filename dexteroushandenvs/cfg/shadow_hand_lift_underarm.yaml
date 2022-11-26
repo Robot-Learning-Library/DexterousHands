@@ -3,7 +3,7 @@ env:
   env_name: "shadow_hand_lift_underarm"
   numEnvs: 256
   envSpacing: 0.75
-  episodeLength: 500
+  episodeLength: 250
   enableDebugVis: False
   aggregateMode: 1
 

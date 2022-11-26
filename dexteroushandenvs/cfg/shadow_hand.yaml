@@ -2,8 +2,8 @@
 env: 
   env_name: "shadow_hand"
   numEnvs: 128
-  envSpacing: 1.5
-  episodeLength: 75
+  envSpacing: 0.75
+  episodeLength: 600
   enableDebugVis: False
   aggregateMode: 1
 
@@ -22,16 +22,16 @@ env:
   resetDofPosRandomInterval: 0.2
   resetDofVelRandomInterval: 0.0
 
-  distRewardScale: 100
+  distRewardScale: -10.0
   rotRewardScale: 1.0
   rotEps: 0.1
   actionPenaltyScale: -0.0002
   reachGoalBonus: 250
-  fallDistance: 0.4
+  fallDistance: 0.24
   fallPenalty: 0.0
 
-  objectType: "egg" # can be block, egg or pen
-  observationType: "full_state" # 
+  objectType: "block" # can be block, egg or pen
+  observationType: "full_state" # can be "openai", "full_no_vel", "full", "full_state"
   handAgentIndex: "[[0, 1, 2, 3, 4, 5]]"
   asymmetric_observations: False
   successTolerance: 0.1

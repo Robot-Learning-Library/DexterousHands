@@ -80,7 +80,7 @@ class ShadowHandDoorCloseOutward(BaseTask):
             "egg": "mjcf/open_ai_assets/hand/egg.xml",
             "pen": "mjcf/open_ai_assets/hand/pen.xml",
             # "pot": "mjcf/pot.xml",
-            "pot": "mjcf/door/mobility.urdf"
+            "pot": "mjcf/door/mobility_doorclose.urdf"
         }
 
         if "asset" in self.cfg["env"]:
@@ -327,7 +327,7 @@ class ShadowHandDoorCloseOutward(BaseTask):
         object_asset_options.override_inertia = True
         object_asset_options.vhacd_enabled = True
         object_asset_options.vhacd_params = gymapi.VhacdParams()
-        object_asset_options.vhacd_params.resolution = 100000
+        object_asset_options.vhacd_params.resolution = 200000
         object_asset_options.default_dof_drive_mode = gymapi.DOF_MODE_NONE
 
         object_asset = self.gym.load_asset(self.sim, asset_root, object_asset_file, object_asset_options)
@@ -364,11 +364,11 @@ class ShadowHandDoorCloseOutward(BaseTask):
         table_asset = self.gym.create_box(self.sim, table_dims.x, table_dims.y, table_dims.z, asset_options)
 
         shadow_hand_start_pose = gymapi.Transform()
-        shadow_hand_start_pose.p = gymapi.Vec3(0.55, 0.2, 0.6)
+        shadow_hand_start_pose.p = gymapi.Vec3(0.45, 0.2, 0.6)
         shadow_hand_start_pose.r = gymapi.Quat().from_euler_zyx(3.14159, 1.57, 1.57)
 
         shadow_another_hand_start_pose = gymapi.Transform()
-        shadow_another_hand_start_pose.p = gymapi.Vec3(0.55, -0.2, 0.6)
+        shadow_another_hand_start_pose.p = gymapi.Vec3(0.45, -0.2, 0.6)
         shadow_another_hand_start_pose.r = gymapi.Quat().from_euler_zyx(3.14159, -1.57, 1.57)
 
         object_start_pose = gymapi.Transform()
@@ -501,7 +501,7 @@ class ShadowHandDoorCloseOutward(BaseTask):
             object_dof_props = self.gym.get_actor_dof_properties(env_ptr, object_handle)
             for object_dof_prop in object_dof_props:
                 object_dof_prop[4] = 100
-                object_dof_prop[5] = 100
+                object_dof_prop[5] = 0
                 object_dof_prop[6] = 5
                 object_dof_prop[7] = 1
             self.gym.set_actor_dof_properties(env_ptr, object_handle, object_dof_props)
@@ -509,7 +509,7 @@ class ShadowHandDoorCloseOutward(BaseTask):
             #set friction
             object_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, object_handle)
             for object_shape_prop in object_shape_props:
-                object_shape_prop.friction = 0.1
+                object_shape_prop.friction = 0.02
             self.gym.set_actor_rigid_shape_properties(env_ptr, object_handle, object_shape_props)
 
             if self.object_type != "block":
@@ -587,13 +587,13 @@ class ShadowHandDoorCloseOutward(BaseTask):
         self.door_left_handle_rot = self.rigid_body_states[:, 26 * 2 + 3, 3:7]
         self.door_left_handle_pos = self.door_left_handle_pos + quat_apply(self.door_left_handle_rot, to_torch([0, 1, 0], device=self.device).repeat(self.num_envs, 1) * -0.5)
         self.door_left_handle_pos = self.door_left_handle_pos + quat_apply(self.door_left_handle_rot, to_torch([1, 0, 0], device=self.device).repeat(self.num_envs, 1) * -0.39)
-        self.door_left_handle_pos = self.door_left_handle_pos + quat_apply(self.door_left_handle_rot, to_torch([0, 0, 1], device=self.device).repeat(self.num_envs, 1) * -0.04)
+        self.door_left_handle_pos = self.door_left_handle_pos + quat_apply(self.door_left_handle_rot, to_torch([0, 0, 1], device=self.device).repeat(self.num_envs, 1) * -0.1)
 
         self.door_right_handle_pos = self.rigid_body_states[:, 26 * 2 + 2, 0:3]
         self.door_right_handle_rot = self.rigid_body_states[:, 26 * 2 + 2, 3:7]
         self.door_right_handle_pos = self.door_right_handle_pos + quat_apply(self.door_right_handle_rot, to_torch([0, 1, 0], device=self.device).repeat(self.num_envs, 1) * -0.5)
         self.door_right_handle_pos = self.door_right_handle_pos + quat_apply(self.door_right_handle_rot, to_torch([1, 0, 0], device=self.device).repeat(self.num_envs, 1) * 0.39)
-        self.door_right_handle_pos = self.door_right_handle_pos + quat_apply(self.door_right_handle_rot, to_torch([0, 0, 1], device=self.device).repeat(self.num_envs, 1) * -0.04)
+        self.door_right_handle_pos = self.door_right_handle_pos + quat_apply(self.door_right_handle_rot, to_torch([0, 0, 1], device=self.device).repeat(self.num_envs, 1) * -0.1)
 
         self.left_hand_pos = self.rigid_body_states[:, 3 + 26, 0:3]
         self.left_hand_rot = self.rigid_body_states[:, 3 + 26, 3:7]
@@ -890,17 +890,17 @@ class ShadowHandDoorCloseOutward(BaseTask):
                 self.add_debug_lines(self.envs[i], self.door_left_handle_pos[i], self.door_left_handle_rot[i])
                 self.add_debug_lines(self.envs[i], self.door_right_handle_pos[i], self.door_right_handle_rot[i])
 
-                self.add_debug_lines(self.envs[i], self.right_hand_ff_pos[i], self.right_hand_ff_rot[i])
-                self.add_debug_lines(self.envs[i], self.right_hand_mf_pos[i], self.right_hand_mf_rot[i])
-                self.add_debug_lines(self.envs[i], self.right_hand_rf_pos[i], self.right_hand_rf_rot[i])
-                self.add_debug_lines(self.envs[i], self.right_hand_lf_pos[i], self.right_hand_lf_rot[i])
-                self.add_debug_lines(self.envs[i], self.right_hand_th_pos[i], self.right_hand_th_rot[i])
+                # self.add_debug_lines(self.envs[i], self.right_hand_ff_pos[i], self.right_hand_ff_rot[i])
+                # self.add_debug_lines(self.envs[i], self.right_hand_mf_pos[i], self.right_hand_mf_rot[i])
+                # self.add_debug_lines(self.envs[i], self.right_hand_rf_pos[i], self.right_hand_rf_rot[i])
+                # self.add_debug_lines(self.envs[i], self.right_hand_lf_pos[i], self.right_hand_lf_rot[i])
+                # self.add_debug_lines(self.envs[i], self.right_hand_th_pos[i], self.right_hand_th_rot[i])
 
-                self.add_debug_lines(self.envs[i], self.left_hand_ff_pos[i], self.right_hand_ff_rot[i])
-                self.add_debug_lines(self.envs[i], self.left_hand_mf_pos[i], self.right_hand_mf_rot[i])
-                self.add_debug_lines(self.envs[i], self.left_hand_rf_pos[i], self.right_hand_rf_rot[i])
-                self.add_debug_lines(self.envs[i], self.left_hand_lf_pos[i], self.right_hand_lf_rot[i])
-                self.add_debug_lines(self.envs[i], self.left_hand_th_pos[i], self.right_hand_th_rot[i])
+                # self.add_debug_lines(self.envs[i], self.left_hand_ff_pos[i], self.right_hand_ff_rot[i])
+                # self.add_debug_lines(self.envs[i], self.left_hand_mf_pos[i], self.right_hand_mf_rot[i])
+                # self.add_debug_lines(self.envs[i], self.left_hand_rf_pos[i], self.right_hand_rf_rot[i])
+                # self.add_debug_lines(self.envs[i], self.left_hand_lf_pos[i], self.right_hand_lf_rot[i])
+                # self.add_debug_lines(self.envs[i], self.left_hand_th_pos[i], self.right_hand_th_rot[i])
 
 
     def add_debug_lines(self, env, pos, rot):
@@ -957,13 +957,15 @@ def compute_hand_reward(
     # Total reward is: position distance + orientation alignment + action regularization + success bonus + fall penalty
     # reward = torch.exp(-0.05*(up_rew * dist_reward_scale)) + torch.exp(-0.05*(right_hand_dist_rew * dist_reward_scale)) + torch.exp(-0.05*(left_hand_dist_rew * dist_reward_scale))
     up_rew = torch.zeros_like(right_hand_dist_rew)
-    up_rew = torch.where(right_hand_finger_dist < 0.5,
-                    torch.where(left_hand_finger_dist < 0.5,
-                                    1 - torch.abs(door_right_handle_pos[:, 1] - door_left_handle_pos[:, 1]) * 2, up_rew), up_rew)
+    up_rew = torch.where(right_hand_finger_dist < 0.6,
+                    torch.where(left_hand_finger_dist < 0.6,
+                                    0.8 - torch.abs(door_right_handle_pos[:, 1] - door_left_handle_pos[:, 1]), up_rew), up_rew)
 
     # reward = torch.exp(-0.1*(right_hand_dist_rew * dist_reward_scale)) + torch.exp(-0.1*(left_hand_dist_rew * dist_reward_scale))
-    reward = 6 - right_hand_dist_rew - left_hand_dist_rew + up_rew
-
+    reward = 4 - right_hand_dist_rew - left_hand_dist_rew + up_rew * 5
+    print(right_hand_finger_dist[0])
+    print(left_hand_finger_dist[0])
+    print(torch.abs(door_right_handle_pos[:, 1] - door_left_handle_pos[:, 1])[0])
     resets = torch.where(right_hand_finger_dist >= 3, torch.ones_like(reset_buf), reset_buf)
     resets = torch.where(left_hand_finger_dist >= 3, torch.ones_like(resets), resets)
 
