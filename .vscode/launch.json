@@ -1,0 +1,29 @@
+{
+<<<<<<< HEAD
+    "configurations": [
+        {
+            "name": "Python: Current File",
+=======
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Python: 当前文件",
+>>>>>>> c0b656739b6bc3f53ac594a4dcb7cad91063f399
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+<<<<<<< HEAD
+            "justMyCode": true
+=======
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/dexteroushandenvs",
+            "args": ["--task=ShadowHandOver","--algo=maddpg", "--headless"]
+>>>>>>> c0b656739b6bc3f53ac594a4dcb7cad91063f399
+        }
+    ]
+}

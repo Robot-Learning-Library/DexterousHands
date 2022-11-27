@@ -1,6 +1,8 @@
-# data
-bi-dexhands/data/
-bi-dexhands/wandb/
+# Data:
+*data/*
+*logs/*
+bi-dexhands/data/*
+bi-dexhands/logs/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -132,10 +134,10 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-bi-dexhands/logs/
+dexteroushandenvs/logs/
 # contact buffer and other info created in running
-bi-dexhands/runs
+dexteroushandenvs/runs
 # too large files in assets
 assets/dataset
 
-bi_dexhands.egg-info
+dexteroushandenvs/demonstration

@@ -1,0 +1,9 @@
+diff --git a/bi-dexhands/wandb/latest-run b/bi-dexhands/wandb/latest-run
+index c9a3bef..6a0ea22 120000
+--- a/bi-dexhands/wandb/latest-run
++++ b/bi-dexhands/wandb/latest-run
+@@ -1 +1 @@
+-run-20220823_140225-h89gnv84
+\ No newline at end of file
++run-20221015_222356-2wehuq2e
+\ No newline at end of file

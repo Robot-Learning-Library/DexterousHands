@@ -3,7 +3,7 @@ echo "Save as: " $DATE
 
 # declare -a tasks=('ShadowHandCatchAbreast' 'ShadowHandOver')
 
-# declare -a tasks=('ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandBlockStack' 'ShadowHandCatchUnderarm'
+# declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandBlockStack' 'ShadowHandCatchUnderarm'
 # 'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap' 'ShadowHandLiftUnderarm' 'ShadowHandTwoCatchUnderarm'
 # 'ShadowHandDoorOpenInward' 'ShadowHandDoorOpenOutward' 'ShadowHandDoorCloseInward' 'ShadowHandDoorCloseOutward'
 # 'ShadowHandPushBlock' 'ShadowHandKettle' 'ShadowHandLiftUnderarm' 'ShadowHandReOrientation'

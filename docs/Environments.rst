@@ -3,7 +3,7 @@
 Environments
 ==========================
 
-Source code for tasks can be found in `bi-dexhands/tasks`. 
+Source code for tasks can be found in `dexteroushandenvs/tasks`. 
 
 Until now we only suppose the following environments:
 
