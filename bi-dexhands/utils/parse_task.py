@@ -25,6 +25,7 @@ from tasks.shadow_hand_pen import ShadowHandPen
 from tasks.shadow_hand_re_orientation import ShadowHandReOrientation
 from tasks.shadow_hand_kettle import ShadowHandKettle
 from tasks.shadow_hand_block_stack import ShadowHandBlockStack
+from tasks.shadow_hand import ShadowHand
 
 # Allegro hand
 from tasks.allegro_hand_over import AllegroHandOver
@@ -39,6 +40,7 @@ from tasks.hand_base.vec_task import VecTaskCPU, VecTaskGPU, VecTaskPython, VecT
 from tasks.hand_base.multi_vec_task import MultiVecTaskPython, SingleVecTaskPythonArm
 from tasks.hand_base.multi_task_vec_task import MultiTaskVecTaskPython
 from tasks.hand_base.meta_vec_task import MetaVecTaskPython
+from tasks.hand_base.vec_task_rlgames import RLgamesVecTaskPython
 
 from utils.config import warn_task_name
 
@@ -184,5 +186,27 @@ def parse_task(args, cfg, cfg_train, sim_params, agent_index):
             warn_task_name()
         env = MetaVecTaskPython(task, rl_device)
 
+<<<<<<< HEAD
 
+=======
+    elif args.task_type == "RLgames":
+        print("Task type: RLgames")
+
+        try:
+            task = eval(args.task)(
+                cfg=cfg,
+                sim_params=sim_params,
+                physics_engine=args.physics_engine,
+                device_type=args.device,
+                device_id=device_id,
+                headless=args.headless,
+                agent_index=agent_index,
+                is_multi_agent=False)
+        except NameError as e:
+            print(e)
+            warn_task_name()
+        env = RLgamesVecTaskPython(task, rl_device)
+>>>>>>> 74513630fcba4d6819c97646aca3729b200bfe3f
     return task, env
+
+

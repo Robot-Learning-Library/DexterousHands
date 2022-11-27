@@ -134,7 +134,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-dexteroushandenvs/logs/
+bi-dexhands/logs/
+bi-dexhands/runs/
 # contact buffer and other info created in running
 dexteroushandenvs/runs
 # too large files in assets
