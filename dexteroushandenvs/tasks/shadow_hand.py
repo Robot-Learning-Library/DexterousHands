@@ -398,7 +398,8 @@ class ShadowHand(BaseTask):
             self.max_consecutive_successes, self.av_factor, (self.object_type == "pen")
         )
 
-        # self.extras['consecutive_successes'] = self.consecutive_successes.mean()
+        self.extras['successes'] = self.successes
+        self.extras['consecutive_successes'] = self.consecutive_successes
 
         if self.print_success_stat:
             self.total_resets = self.total_resets + self.reset_buf.sum()

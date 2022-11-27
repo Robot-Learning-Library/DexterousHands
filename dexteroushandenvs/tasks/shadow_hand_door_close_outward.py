@@ -963,9 +963,7 @@ def compute_hand_reward(
 
     # reward = torch.exp(-0.1*(right_hand_dist_rew * dist_reward_scale)) + torch.exp(-0.1*(left_hand_dist_rew * dist_reward_scale))
     reward = 4 - right_hand_dist_rew - left_hand_dist_rew + up_rew * 5
-    print(right_hand_finger_dist[0])
-    print(left_hand_finger_dist[0])
-    print(torch.abs(door_right_handle_pos[:, 1] - door_left_handle_pos[:, 1])[0])
+
     resets = torch.where(right_hand_finger_dist >= 3, torch.ones_like(reset_buf), reset_buf)
     resets = torch.where(left_hand_finger_dist >= 3, torch.ones_like(resets), resets)
 
@@ -974,6 +972,9 @@ def compute_hand_reward(
     # print(up_rew[0])
 
     # Find out which envs hit the goal and update successes count
+    successes = torch.where(successes == 0, 
+                    torch.where(torch.abs(door_right_handle_pos[:, 1] - door_left_handle_pos[:, 1]) < 0.5, torch.ones_like(successes), successes), successes)
+                    
     resets = torch.where(progress_buf >= max_episode_length, torch.ones_like(resets), resets)
 
     goal_resets = torch.zeros_like(resets)
@@ -981,8 +982,8 @@ def compute_hand_reward(
     num_resets = torch.sum(resets)
     finished_cons_successes = torch.sum(successes * resets.float())
 
-    cons_successes = torch.where(num_resets > 0, av_factor*finished_cons_successes/num_resets + (1.0 - av_factor)*consecutive_successes, consecutive_successes)
-
+    cons_successes = torch.where(resets > 0, successes * resets, consecutive_successes)
+    
     return reward, resets, goal_resets, progress_buf, successes, cons_successes
 
 
