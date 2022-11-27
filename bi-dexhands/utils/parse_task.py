@@ -186,9 +186,6 @@ def parse_task(args, cfg, cfg_train, sim_params, agent_index):
             warn_task_name()
         env = MetaVecTaskPython(task, rl_device)
 
-<<<<<<< HEAD
-
-=======
     elif args.task_type == "RLgames":
         print("Task type: RLgames")
 
@@ -206,7 +203,6 @@ def parse_task(args, cfg, cfg_train, sim_params, agent_index):
             print(e)
             warn_task_name()
         env = RLgamesVecTaskPython(task, rl_device)
->>>>>>> 74513630fcba4d6819c97646aca3729b200bfe3f
     return task, env
 
 
