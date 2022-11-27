@@ -2,4 +2,4 @@
 Contribution
 ======================================
 
-bi-dexhands is still under development.
+DexterousHandEnvs is still under development.

@@ -1,0 +1,31 @@
+{
+    "os": "Linux-5.15.0-50-generic-x86_64-with-debian-bullseye-sid",
+    "python": "3.7.0",
+    "heartbeatAt": "2022-10-20T01:17:35.305298",
+    "startedAt": "2022-10-20T01:17:34.978424",
+    "docker": null,
+    "gpu": "NVIDIA GeForce RTX 3060 Ti",
+    "gpu_count": 1,
+    "cpu_count": 16,
+    "cuda": null,
+    "args": [
+        "--task=ShadowHandSwingCup",
+        "--algo=ppo",
+        "--record_video=True",
+        "--record_video_interval=30",
+        "--wandb_activate=True",
+        "--wandb_entity=quantumiracle"
+    ],
+    "state": "running",
+    "program": "train.py",
+    "codePath": "bi-dexhands/train.py",
+    "git": {
+        "remote": "https://github.com/Robot-Learning-Library/DexterousHands",
+        "commit": "bdb9e9f2a323eac982d637e12fa9e0327cce2678"
+    },
+    "email": "zhding@mail.ustc.edu.cn",
+    "root": "/home/quantumiracle/research/DexterousHands",
+    "host": "quantumiracle-XPS-8940",
+    "username": "quantumiracle",
+    "executable": "/home/quantumiracle/anaconda3/envs/x/bin/python"
+}

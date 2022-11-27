@@ -18,7 +18,7 @@ import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
 
-project = 'bi-dexhands'
+project = 'DexterousHandEnvs'
 copyright = ''
 author = ''
 

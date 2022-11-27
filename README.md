@@ -1,10 +1,6 @@
 # Bi-DexHands: Bimanual Dexterous Manipulation via Reinforcement Learning
 <img src="assets/image_folder/coverv3.jpg" width="1000" border="1"/>
 
-Train with:
-```
-python train.py --task=ShadowHandOver --algo=ppo --record_video=True --wandb_activate=True --wandb_entity **
-```
 ****
 [![PyPI](https://img.shields.io/pypi/v/bidexhands)](https://pypi.org/project/bidexhands/)
 [![Organization](https://img.shields.io/badge/Organization-PKU_MARL-blue.svg "Organization")](https://github.com/PKU-MARL "Organization")
@@ -12,14 +8,18 @@ python train.py --task=ShadowHandOver --algo=ppo --record_video=True --wandb_act
 [![Docs](https://img.shields.io/badge/Docs-In_development-red.svg "Author")](https://github.com/PKU-MARL "Docs")
 [![GitHub license](https://img.shields.io/github/license/PKU-MARL/DexterousHands)](https://github.com/PKU-MARL/DexterousHands/blob/main/LICENSE)
 
+<<<<<<< HEAD
 **Bi-DexHands** provides a collection of bimanual dexterous manipulations tasks and reinforcement learning algorithms. 
-Reaching human-level sophistication of hand dexterity and bimanual coordination remains an open challenge for modern robotics researchers. To better help the community study this problem, Bi-DexHands are developed with the following key features:
+=======
+### Update
+
+:star2: [2022/10/02] Now we support for the default IsaacGymEnvs RL library [rl-games](https://github.com/Denys88/rl_games), check our README [below](#Use-rl_games-to-train-our-tasks).
+
 - **Isaac Efficiency**: Bi-DexHands is built within [Isaac Gym](https://developer.nvidia.com/isaac-gym); it supports running thousands of environments simultaneously. For example, on one NVIDIA RTX 3090 GPU, Bi-DexHands can reach **40,000+ mean FPS** by running  2,048  environments in parallel. 
 - **Comprehensive RL Benchmark**: we provide the first bimanual manipulation task environment for RL, MARL, Multi-task RL, Meta RL, and Offline RL practitioners, along with a comprehensive benchmark for SOTA continuous control model-free RL/MARL methods. See [example](./bi-dexhands/algorithms/marl/)
 - **Heterogeneous-agents Cooperation**: Agents in Bi-DexHands (i.e., joints, fingers, hands,...) are genuinely heterogeneous; this is very different from common multi-agent environments such as [SMAC](https://github.com/oxwhirl/smac)  where agents can simply share parameters to solve the task. 
 - **Task Generalization**: we introduce a variety of dexterous manipulation tasks (e.g., handover, lift up, throw, place, put...) as well as enormous target objects from the [YCB](https://rse-lab.cs.washington.edu/projects/posecnn/) and [SAPIEN](https://sapien.ucsd.edu/) dataset (>2,000 objects); this allows meta-RL and multi-task RL algorithms to be tested on the task generalization front. 
 - **Point Cloud**: We provide the ability to use point clouds as observations. We used the depth camera in Isaacc Gym to get the depth image and then convert it to partial point cloud. We can customize the pose and numbers of depth cameras to get point cloud from difference angles. The density of generated point cloud depends on the number of the camera pixels. See the [visual input docs](./docs/point-cloud.md). 
-- **Quick Demos**
 
 <div align=center>
 <img src="assets/image_folder/quick_demo3.gif" align="center" width="600"/>
@@ -42,6 +42,11 @@ Contents of this repo are as follows:
   - [Plotting](#Plotting)
 - [Enviroments Performance](#Enviroments-Performance)
   - [Figures](#Figures)
+<<<<<<< HEAD
+=======
+- [Offline RL Datasets](#Offline-RL-Datasets)
+- [Use rl_games to train our tasks](#Use-rl_games-to-train-our-tasks)
+>>>>>>> master
 - [Future Plan](#Future-Plan)
 - [Customizing your Environments](docs/customize-the-environment.md)
 - [How to change the type of dexterous hand](docs/Change-the-type-of-dexterous-hand.md)
@@ -428,7 +433,51 @@ You can then build the documentation by running `make <format>` from the
 If you get a katex error run `npm install katex`.  If it persists, try
 `npm install -g katex` -->
 
+<<<<<<< HEAD
 ### Known issue
+=======
+## Offline RL Datasets
+
+### Data Collection
+
+`ppo_collect` is the algo that collects offline data, which is basically the same as the mujoco data collection in d4rl. Firstly train the PPO for 5000 iterations, and collect and save the demonstration data in the first 2500 iterations:
+
+```bash
+python train.py --task=ShadowHandOver --algo=ppo_collection --num_envs=2048 --headless
+```
+
+Select model_5000.pt as the export policy to collect the expert dataset:
+
+```bash
+python3	train.py --task=ShadowHandOver --algo=ppo_collect --model_dir=./logs/shadow_hand_over/ppo_collect/ppo_collect_seed-1/model_5000.pt --test --num_envs=200 --headless
+```
+
+Similarly, select model.pt as the random policy, select a model as the medium policy, collect random data and medium data as above, and evenly sample the replay data set from the demonstration data before training to the medium policy. The size of each dataset is 10e6. Run merge.py to get the medium-expert dataset.
+
+### Offline Data
+
+The originally collected data in our paper is available at: 
+[Shadow Hand Over](https://disk.pku.edu.cn:443/link/ACCFC4006518E9797D7290861D0ED750), 
+[Shadow Hand Door Open Outward](https://disk.pku.edu.cn:443/link/A6D4813C2AFF6298092F4DECB336428F).
+
+### Use rl_games to train our tasks
+
+For example, if you want to train a policy for the ShadowHandOver task by the PPO algorithm, run this line in `bi-dexhands` folder:
+
+```bash
+python train_rlgames.py --task=ShadowHandOver --algo=ppo
+```
+
+Currently we only support PPO and PPO with LSTM methods in rl_games. If you want to use PPO with LSTM, run this line in `bi-dexhands` folder:
+
+```bash
+python train_rlgames.py --task=ShadowHandOver --algo=ppo_lstm
+``` 
+
+The log files using rl_games can be found in `bi-dexhands/runs` folder.
+
+## Known issue
+>>>>>>> master
 
 It must be pointed out that Bi-DexHands is still under development, and there are some known issue: 
 - Some environments may report errors due to PhysX's collision calculation bugs in the later stage of program runtime.
@@ -443,16 +492,30 @@ CUDA kernel errors might be asynchronously reported at some other API call,so th
  - [ ] Success Metric for all tasks
  - [ ] Benchmark other RL algorithms
  - [ ] Add fatory environment (see [this](https://sites.google.com/nvidia.com/factory))
+<<<<<<< HEAD
  - [ ] Add support for the default IsaacGymEnvs RL library [rl-games](https://github.com/Denys88/rl_games)
+=======
+ - [x] Add support for the default IsaacGymEnvs RL library [rl-games](https://github.com/Denys88/rl_games)
+>>>>>>> master
 
 ## Citation
 Please cite as following if you think this work is helpful for you:
 ```
+<<<<<<< HEAD
 @misc{2206.08686,
 Author = {Yuanpei Chen and Yaodong Yang and Tianhao Wu and Shengjie Wang and Xidong Feng and Jiechuang Jiang and Stephen Marcus McAleer and Hao Dong and Zongqing Lu and Song-Chun Zhu},
 Title = {Towards Human-Level Bimanual Dexterous Manipulation with Reinforcement Learning},
 Year = {2022},
 Eprint = {arXiv:2206.08686},
+=======
+@inproceedings{
+chen2022towards,
+title={Towards Human-Level Bimanual Dexterous Manipulation with Reinforcement Learning},
+author={Yuanpei Chen and Yaodong Yang and Tianhao Wu and Shengjie Wang and Xidong Feng and Jiechuan Jiang and Zongqing Lu and Stephen Marcus McAleer and Hao Dong and Song-Chun Zhu},
+booktitle={Thirty-sixth Conference on Neural Information Processing Systems Datasets and Benchmarks Track},
+year={2022},
+url={https://openreview.net/forum?id=D29JbExncTP}
+>>>>>>> master
 }
 ```
 

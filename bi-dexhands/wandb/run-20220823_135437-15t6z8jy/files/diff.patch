@@ -1,0 +1,79 @@
+diff --git a/bi-dexhands/train.py b/bi-dexhands/train.py
+index 0321a7f..25028b8 100644
+--- a/bi-dexhands/train.py
++++ b/bi-dexhands/train.py
+@@ -90,6 +90,10 @@ if __name__ == '__main__':
+     set_np_formatting()
+     args = get_args()
+     cfg, cfg_train, logdir = load_cfg(args)
++    all_cfgs = {}
++    all_cfgs.update(cfg)
++    all_cfgs.update(cfg_train)
++    print(all_cfgs)
+     sim_params = parse_sim_params(args, cfg, cfg_train)
+     set_seed(cfg_train.get("seed", -1), cfg_train.get("torch_deterministic", False))
+     train()
+diff --git a/bi-dexhands/utils/config.py b/bi-dexhands/utils/config.py
+index 615eeb2..fb2688d 100644
+--- a/bi-dexhands/utils/config.py
++++ b/bi-dexhands/utils/config.py
+@@ -15,6 +15,7 @@ from isaacgym import gymutil
+ import numpy as np
+ import random
+ import torch
++from utils.wandb import init_wandb
+ 
+ 
+ def set_np_formatting():
+@@ -102,6 +103,13 @@ def load_cfg(args, use_rlg_config=False):
+         cfg["task"] = {"randomize": False}
+ 
+     logdir = args.logdir
++    if "wandb_activate" in args:
++        cfg["wandb_activate"] = args.wandb_activate
++    if "wandb_project" in args:
++        cfg["wandb_project"] = args.wandb_project
++    if "wandb_name" in args:
++        cfg["wandb_name"] = args.wandb_name
++
+     if use_rlg_config:
+ 
+         # Set deterministic mode
+@@ -249,7 +257,14 @@ def get_args(benchmark=False, use_rlg_config=False):
+         {"name": "--model_dir", "type": str, "default": "",
+             "help": "Choose a model dir"},
+         {"name": "--datatype", "type": str, "default": "random",
+-            "help": "Choose an ffline datatype"}]
++            "help": "Choose an ffline datatype"},
++        {"name": "--wandb_activate", "type": bool, "default": False,
++            "help": "Activate WandB"},
++        {"name": "--wandb_entity", "type": str, "default": "",
++            "help": "Account of WandB"},
++        {"name": "--wandb_project", "type": str, "default": "bi-dexhands",
++            "help": "Choose a project name"}]
++
+ 
+     if benchmark:
+         custom_parameters += [{"name": "--num_proc", "type": int, "default": 1, "help": "Number of child processes to launch"},
+@@ -264,6 +279,8 @@ def get_args(benchmark=False, use_rlg_config=False):
+         description="RL Policy",
+         custom_parameters=custom_parameters)
+ 
++    print('raw: ', args)
++
+     # allignment with examples
+     args.device_id = args.compute_device_id
+     args.device = args.sim_device_type if args.use_gpu_pipeline else 'cpu'
+@@ -298,6 +315,12 @@ def get_args(benchmark=False, use_rlg_config=False):
+     if args.cfg_env == "Base":
+         args.cfg_env = cfg_env
+ 
++    from datetime import datetime
++    now = datetime.now()
++    save_time_stamp = now.strftime("%Y%m%d%H%M%S")
++    args.wandb_name = '_'.join((args.task, args.algo, str(save_time_stamp)))
++    init_wandb(args)
++
+     # if args.algo not in ["maddpg", "happo", "mappo", "hatrpo","ippo","ppo","sac","td3","ddpg","trpo"]:
+     #     warn_algorithm_name()
+ 
