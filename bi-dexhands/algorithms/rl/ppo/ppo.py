@@ -85,11 +85,11 @@ class PPO:
         self.apply_reset = apply_reset
 
     def test(self, path):
-        self.actor_critic.load_state_dict(torch.load(path))
+        self.actor_critic.load_state_dict(torch.load(path, map_location=self.device))
         self.actor_critic.eval()
 
     def load(self, path):
-        self.actor_critic.load_state_dict(torch.load(path))
+        self.actor_critic.load_state_dict(torch.load(path, map_location=self.device))
         self.current_learning_iteration = int(path.split("_")[-1].split(".")[0])
         self.actor_critic.train()
 

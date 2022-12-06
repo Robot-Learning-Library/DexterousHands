@@ -83,7 +83,7 @@ def parse_task(args, cfg, cfg_train, sim_params, agent_index):
 
     elif args.task_type == "Python":
         print("Python")
-
+        cfg["record_video"] = args.record_video
         try:
             task = eval(args.task)(
                 cfg=cfg,
@@ -107,7 +107,7 @@ def parse_task(args, cfg, cfg_train, sim_params, agent_index):
             task = gym.wrappers.RecordVideo(task, f"data/videos/{args.task}_{args.algo}_{args.save_time_stamp}",\
                     # step_trigger=lambda step: step % record_video_interval == 0, # record the videos every record_video_interval steps
                     episode_trigger=lambda episode: episode % record_video_interval == 0, # record the videos every record_video_interval episodes
-                    video_length=record_video_length, 
+                    # video_length=record_video_length, 
                     )
                     
         if args.task == "OneFrankaCabinet" :

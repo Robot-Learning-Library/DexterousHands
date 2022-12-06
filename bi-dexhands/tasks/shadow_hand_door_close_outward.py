@@ -182,8 +182,10 @@ class ShadowHandDoorCloseOutward(BaseTask):
         super().__init__(cfg=self.cfg)
 
         if self.viewer != None:
-            cam_pos = gymapi.Vec3(10.0, 5.0, 1.0)
-            cam_target = gymapi.Vec3(6.0, 5.0, 0.0)
+            # cam_pos = gymapi.Vec3(10.0, 5.0, 1.0)
+            # cam_target = gymapi.Vec3(6.0, 5.0, 0.0)
+            cam_pos = gymapi.Vec3(1.5, 0.2, 1.3)
+            cam_target = gymapi.Vec3(-1.5, 0.2, 0.0)
             self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
 
         # get gym GPU state tensors

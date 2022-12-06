@@ -179,8 +179,10 @@ class ShadowHandOver(BaseTask):
         super().__init__(cfg=self.cfg)
 
         if self.viewer != None:
-            cam_pos = gymapi.Vec3(10.0, 5.0, 1.0)
-            cam_target = gymapi.Vec3(6.0, 5.0, 0.0)
+            # cam_pos = gymapi.Vec3(10.0, 5.0, 1.0)
+            # cam_target = gymapi.Vec3(6.0, 5.0, 0.0)
+            cam_pos = gymapi.Vec3(0.8, 0.2, 1.5)
+            cam_target = gymapi.Vec3(-0.2, 0.2, 0.0)
             self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
 
         # get gym GPU state tensors
@@ -240,7 +242,7 @@ class ShadowHandOver(BaseTask):
         self.up_axis_idx = self.set_sim_params_up_axis(self.sim_params, self.up_axis)
 
         self.sim = super().create_sim(self.device_id, self.graphics_device_id, self.physics_engine, self.sim_params)
-        self._create_ground_plane()
+        # self._create_ground_plane()
         self._create_envs(self.num_envs, self.cfg["env"]['envSpacing'], int(np.sqrt(self.num_envs)))
 
     def _create_ground_plane(self):
