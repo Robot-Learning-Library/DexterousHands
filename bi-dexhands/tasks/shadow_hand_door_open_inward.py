@@ -293,7 +293,7 @@ class ShadowHandDoorOpenInward(BaseTask):
 
         asset_root = "../../assets"
         shadow_hand_asset_file = "mjcf/open_ai_assets/hand/shadow_hand.xml"
-        shadow_hand_another_asset_file = "mjcf/open_ai_assets/hand/shadow_hand1.xml"
+        shadow_hand_another_asset_file = "mjcf/open_ai_assets/hand/shadow_hand_left.xml"
         table_texture_files = "../assets/textures/texture_stone_stone_texture_0.jpg"
         table_texture_handle = self.gym.create_texture_from_file(self.sim, table_texture_files)
 
@@ -361,6 +361,9 @@ class ShadowHandDoorOpenInward(BaseTask):
 
         self.shadow_hand_dof_lower_limits = []
         self.shadow_hand_dof_upper_limits = []
+        self.shadow_hand_left_dof_lower_limits = []
+        self.shadow_hand_left_dof_upper_limits = []
+
         self.shadow_hand_dof_default_pos = []
         self.shadow_hand_dof_default_vel = []
         self.sensors = []
@@ -369,12 +372,18 @@ class ShadowHandDoorOpenInward(BaseTask):
         for i in range(self.num_shadow_hand_dofs):
             self.shadow_hand_dof_lower_limits.append(shadow_hand_dof_props['lower'][i])
             self.shadow_hand_dof_upper_limits.append(shadow_hand_dof_props['upper'][i])
+            self.shadow_hand_left_dof_lower_limits.append(shadow_hand_another_dof_props['lower'][i])
+            self.shadow_hand_left_dof_upper_limits.append(shadow_hand_another_dof_props['upper'][i])
+
             self.shadow_hand_dof_default_pos.append(0.0)
             self.shadow_hand_dof_default_vel.append(0.0)
 
         self.actuated_dof_indices = to_torch(self.actuated_dof_indices, dtype=torch.long, device=self.device)
         self.shadow_hand_dof_lower_limits = to_torch(self.shadow_hand_dof_lower_limits, device=self.device)
         self.shadow_hand_dof_upper_limits = to_torch(self.shadow_hand_dof_upper_limits, device=self.device)
+        self.shadow_hand_left_dof_lower_limits = to_torch(self.shadow_hand_left_dof_lower_limits, device=self.device)
+        self.shadow_hand_left_dof_upper_limits = to_torch(self.shadow_hand_left_dof_upper_limits, device=self.device)
+
         self.shadow_hand_dof_default_pos = to_torch(self.shadow_hand_dof_default_pos, device=self.device)
         self.shadow_hand_dof_default_vel = to_torch(self.shadow_hand_dof_default_vel, device=self.device)
 
@@ -431,7 +440,7 @@ class ShadowHandDoorOpenInward(BaseTask):
 
         shadow_another_hand_start_pose = gymapi.Transform()
         shadow_another_hand_start_pose.p = gymapi.Vec3(0.55, -0.2, 0.6)
-        shadow_another_hand_start_pose.r = gymapi.Quat().from_euler_zyx(3.14159, -1.57, 1.57)
+        shadow_another_hand_start_pose.r = gymapi.Quat().from_euler_zyx(3.14159, 1.57, 1.57)
 
         object_start_pose = gymapi.Transform()
         object_start_pose.p = gymapi.Vec3(0.0, 0., 0.7)
@@ -842,7 +851,7 @@ class ShadowHandDoorOpenInward(BaseTask):
         # another_hand
         another_hand_start = action_obs_start + 26
         self.obs_buf[:, another_hand_start:self.num_shadow_hand_dofs + another_hand_start] = unscale(self.shadow_hand_another_dof_pos,
-                                                            self.shadow_hand_dof_lower_limits, self.shadow_hand_dof_upper_limits)
+                                                            self.shadow_hand_left_dof_lower_limits, self.shadow_hand_left_dof_upper_limits)
         self.obs_buf[:, self.num_shadow_hand_dofs + another_hand_start:2*self.num_shadow_hand_dofs + another_hand_start] = self.vel_obs_scale * self.shadow_hand_another_dof_vel
         self.obs_buf[:, 2*self.num_shadow_hand_dofs + another_hand_start:3*self.num_shadow_hand_dofs + another_hand_start] = self.force_torque_obs_scale * self.dof_force_tensor[:, 24:48]
 
@@ -928,7 +937,7 @@ class ShadowHandDoorOpenInward(BaseTask):
         # another_hand
         another_hand_start = action_obs_start + 26
         self.obs_buf[:, another_hand_start:self.num_shadow_hand_dofs + another_hand_start] = unscale(self.shadow_hand_another_dof_pos,
-                                                            self.shadow_hand_dof_lower_limits, self.shadow_hand_dof_upper_limits)
+                                                            self.shadow_hand_left_dof_lower_limits, self.shadow_hand_left_dof_upper_limits)
         self.obs_buf[:, self.num_shadow_hand_dofs + another_hand_start:2*self.num_shadow_hand_dofs + another_hand_start] = self.vel_obs_scale * self.shadow_hand_another_dof_vel
         self.obs_buf[:, 2*self.num_shadow_hand_dofs + another_hand_start:3*self.num_shadow_hand_dofs + another_hand_start] = self.force_torque_obs_scale * self.dof_force_tensor[:, 24:48]
 
@@ -1172,11 +1181,11 @@ class ShadowHandDoorOpenInward(BaseTask):
                                                                           self.shadow_hand_dof_lower_limits[self.actuated_dof_indices], self.shadow_hand_dof_upper_limits[self.actuated_dof_indices])
 
             self.cur_targets[:, self.actuated_dof_indices + 24] = scale(self.actions[:, 32:52],
-                                                                   self.shadow_hand_dof_lower_limits[self.actuated_dof_indices], self.shadow_hand_dof_upper_limits[self.actuated_dof_indices])
+                                                                   self.shadow_hand_left_dof_lower_limits[self.actuated_dof_indices], self.shadow_hand_left_dof_upper_limits[self.actuated_dof_indices])
             self.cur_targets[:, self.actuated_dof_indices + 24] = self.act_moving_average * self.cur_targets[:,
                                                                                                         self.actuated_dof_indices + 24] + (1.0 - self.act_moving_average) * self.prev_targets[:, self.actuated_dof_indices]
             self.cur_targets[:, self.actuated_dof_indices + 24] = tensor_clamp(self.cur_targets[:, self.actuated_dof_indices + 24],
-                                                                          self.shadow_hand_dof_lower_limits[self.actuated_dof_indices], self.shadow_hand_dof_upper_limits[self.actuated_dof_indices])
+                                                                          self.shadow_hand_left_dof_lower_limits[self.actuated_dof_indices], self.shadow_hand_left_dof_upper_limits[self.actuated_dof_indices])
             # self.cur_targets[:, 49] = scale(self.actions[:, 0],
             #                                 self.object_dof_lower_limits[1], self.object_dof_upper_limits[1])
             # angle_offsets = self.actions[:, 26:32] * self.dt * self.orientation_scale
@@ -1413,7 +1422,7 @@ def compute_hand_reward(
     up_rew = torch.zeros_like(right_hand_dist_rew)
     up_rew = torch.where(right_hand_finger_dist < 0.5,
                     torch.where(left_hand_finger_dist < 0.5,
-                                    torch.abs(door_right_handle_pos[:, 1] - door_left_handle_pos[:, 1]) * 2, up_rew), up_rew)
+                                    torch.abs(door_right_handle_pos[:, 1] - door_left_handle_pos[:, 1]) * 5, up_rew), up_rew)
 
     # up_rew =  torch.where(right_hand_finger_dist <= 0.3, torch.norm(bottle_cap_up - bottle_pos, p=2, dim=-1) * 30, up_rew)
 
