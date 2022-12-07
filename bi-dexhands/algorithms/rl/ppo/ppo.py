@@ -101,15 +101,19 @@ class PPO:
         current_states = self.vec_env.get_state()
 
         if self.is_testing:
-            while True:
-                with torch.no_grad():
-                    if self.apply_reset:
-                        current_obs = self.vec_env.reset()
-                    # Compute the action
-                    actions = self.actor_critic.act_inference(current_obs)
-                    # Step the vec_environment
-                    next_obs, rews, dones, infos = self.vec_env.step(actions)
-                    current_obs.copy_(next_obs)
+            for it in range(num_learning_iterations):
+                for _ in range(self.num_transitions_per_env):
+                    with torch.no_grad():
+                        if self.apply_reset:
+                            current_obs = self.vec_env.reset()
+                        # Compute the action
+                        actions = self.actor_critic.act_inference(current_obs)
+                        # Step the vec_environment
+                        next_obs, rews, dones, infos = self.vec_env.step(actions)
+                        current_obs.copy_(next_obs)
+
+                print(f" \033[1m Learning iteration {it}/{num_learning_iterations} \033[0m "
+)
         else:
             rewbuffer = deque(maxlen=100)
             lenbuffer = deque(maxlen=100)
