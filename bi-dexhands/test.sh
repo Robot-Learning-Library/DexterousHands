@@ -1,20 +1,26 @@
 DATE=`date '+%Y%m%d_%H%M'`
 echo "Save as: " $DATE
 
-declare -a tasks=('ShadowHandCatchAbreast' 'ShadowHandOver')
+# declare -a tasks=('ShadowHandCatchAbreast' 'ShadowHandCatchUnderarm')
 
 # declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandBlockStack' 'ShadowHandCatchUnderarm'
 # 'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap' 'ShadowHandLiftUnderarm' 'ShadowHandTwoCatchUnderarm'
 # 'ShadowHandDoorOpenInward' 'ShadowHandDoorOpenOutward' 'ShadowHandDoorCloseInward' 'ShadowHandDoorCloseOutward'
-# 'ShadowHandPushBlock' 'ShadowHandKettle' 'ShadowHandLiftUnderarm' 'ShadowHandReOrientation'
+# 'ShadowHandPushBlock' 'ShadowHandKettle' 'ShadowHandReOrientation'
 # 'ShadowHandScissors' 'ShadowHandPen' 'ShadowHandSwingCup' 'ShadowHandBottleCap' 'ShadowHandGraspAndPlace' 'ShadowHandSwitch'
 # )
 
-# declare -a tasks=('ShadowHandPointCloud')  # unrecognized tasks
-# declare -a tasks=('ShadowHandGraspAndPlace' 'ShadowHandSwitch' 'ShadowHandDoorCloseOutward') # not run
+declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandCatchUnderarm'
+'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap' 'ShadowHandTwoCatchUnderarm'
+'ShadowHandDoorOpenInward' 'ShadowHandDoorOpenOutward' 'ShadowHandDoorCloseInward' 'ShadowHandDoorCloseOutward'
+'ShadowHandKettle' 'ShadowHandReOrientation'
+'ShadowHandScissors' 'ShadowHandPen' 'ShadowHandBottleCap' 'ShadowHandGraspAndPlace' 'ShadowHandSwitch'
+)
 
-mkdir -p log/$DATE
+# mkdir -p log/$DATE
+
 for i in ${!tasks[@]}; do
-	echo nohup python train.py --task=${tasks[$i]} --logdir=./test/ --max_iterations=3 --video_path=./ --algo=ppo --model_dir=./logs/${tasks[$i]}/ppo/ppo_seed-1/model_50000.pt --record_video=True --record_video_interval=1 : log/$DATE/${tasks[$i]}.log &
-	nohup python train.py --task=${tasks[$i]} --algo=ppo --model_dir=./logs/${tasks[$i]}/ppo/ppo_seed-1/model_50000.pt --record_video=True --record_video_interval=1 >> log/$DATE/${tasks[$i]}.log &
+	echo nohup python train.py --task=${tasks[$i]} --algo=ppo --test --num_envs=1 --record_video_path=data/videos/test --max_iterations=10 --model_dir=./logs/${tasks[$i]}/ppo/ppo_seed-1/model_100000.pt --record_video=True --record_video_interval=1 : log/$DATE/${tasks[$i]}.log &
+	# nohup python -W ignore train.py  --task=${tasks[$i]} --algo=ppo --test --num_envs=1 --record_video_path=data/videos/test --max_iterations=2 --model_dir=./logs/${tasks[$i]}/ppo/ppo_seed-1/model_100000.pt --record_video=True --record_video_interval=1 >> log/$DATE/${tasks[$i]}.log
+	python -W ignore train.py  --task=${tasks[$i]} --algo=ppo --test --num_envs=1 --record_video_path=data/videos/test --max_iterations=10 --model_dir=./logs/${tasks[$i]}/ppo/ppo_seed-1/model_100000.pt --record_video=True --record_video_interval=1
 done

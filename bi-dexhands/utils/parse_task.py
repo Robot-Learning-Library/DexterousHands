@@ -104,7 +104,7 @@ def parse_task(args, cfg, cfg_train, sim_params, agent_index):
                 record_video_interval = int(1e2)
             record_video_length = 300
             task.is_vector_env = True
-            task = gym.wrappers.RecordVideo(task, args.record_video_path,\
+            task = gym.wrappers.RecordVideo(task, f"{args.record_video_path}/{args.task}_{args.algo}_{args.save_time_stamp}",\
                     # step_trigger=lambda step: step % record_video_interval == 0, # record the videos every record_video_interval steps
                     episode_trigger=lambda episode: episode % record_video_interval == 0, # record the videos every record_video_interval episodes
                     # video_length=record_video_length, 

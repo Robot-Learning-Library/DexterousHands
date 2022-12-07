@@ -282,7 +282,7 @@ def get_args(benchmark=False, use_rlg_config=False):
             "help": "Record video"},
         {"name": "--record_video_interval", "type": int, "default": 100,
             "help": "Interval (episodes) for recording videos"},
-        {"name": "--record_video_path", "type": str, "default": "data/videos/bi-dexhands",
+        {"name": "--record_video_path", "type": str, "default": "data/videos",
             "help": "Path for recording videos"},
     ]
 

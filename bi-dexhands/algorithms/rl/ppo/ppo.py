@@ -102,7 +102,9 @@ class PPO:
 
         if self.is_testing:
             for it in range(num_learning_iterations):
-                for _ in range(self.num_transitions_per_env):
+                dones = torch.tensor([0])
+                # for _ in range(self.num_transitions_per_env):
+                while not torch.all(dones):
                     with torch.no_grad():
                         if self.apply_reset:
                             current_obs = self.vec_env.reset()
@@ -112,8 +114,7 @@ class PPO:
                         next_obs, rews, dones, infos = self.vec_env.step(actions)
                         current_obs.copy_(next_obs)
 
-                print(f" \033[1m Learning iteration {it}/{num_learning_iterations} \033[0m "
-)
+                print(f" \033[1m Learning iteration {it+1}/{num_learning_iterations} \033[0m ")
         else:
             rewbuffer = deque(maxlen=100)
             lenbuffer = deque(maxlen=100)
