@@ -1,7 +1,7 @@
 from datetime import datetime
 import os
 import time
-
+import pickle
 from gym.spaces import Space
 
 import numpy as np
@@ -81,6 +81,8 @@ class PPO:
         self.tot_time = 0
         self.is_testing = is_testing
         self.current_learning_iteration = 0
+        self.record_traj = self.cfg_train["record_traj"]
+        self.record_traj_path = self.cfg_train["record_traj_path"]
 
         self.apply_reset = apply_reset
 
@@ -104,6 +106,7 @@ class PPO:
             for it in range(num_learning_iterations):
                 dones = torch.tensor([0])
                 # for _ in range(self.num_transitions_per_env):
+                traj_info = {'obs': [], 'actions': [], 'rewards': [], 'dones': [], 'next_obs': []}
                 while not torch.all(dones):
                     with torch.no_grad():
                         if self.apply_reset:
@@ -113,7 +116,15 @@ class PPO:
                         # Step the vec_environment
                         next_obs, rews, dones, infos = self.vec_env.step(actions)
                         current_obs.copy_(next_obs)
-
+                        if self.record_traj:
+                            traj_info['obs'].append(current_obs.cpu().numpy())
+                            traj_info['actions'].append(actions.cpu().numpy())
+                            traj_info['rewards'].append(rews)
+                            traj_info['dones'].append(dones)
+                            traj_info['next_obs'].append(next_obs)
+                if self.record_traj:
+                    with open(self.record_traj_path+f'/traj-episode-{it}.pkl', 'wb') as f:
+                        pickle.dump(traj_info, f)
                 print(f" \033[1m Learning iteration {it+1}/{num_learning_iterations} \033[0m ")
         else:
             rewbuffer = deque(maxlen=100)
