@@ -119,9 +119,9 @@ class PPO:
                         if self.record_traj:
                             traj_info['obs'].append(current_obs.cpu().numpy())
                             traj_info['actions'].append(actions.cpu().numpy())
-                            traj_info['rewards'].append(rews)
-                            traj_info['dones'].append(dones)
-                            traj_info['next_obs'].append(next_obs)
+                            traj_info['rewards'].append(rews.cpu().numpy())
+                            traj_info['dones'].append(dones.cpu().numpy())
+                            traj_info['next_obs'].append(next_obs.cpu().numpy())
                 if self.record_traj:
                     with open(self.record_traj_path+f'/traj-episode-{it}.pkl', 'wb') as f:
                         pickle.dump(traj_info, f)
