@@ -85,11 +85,11 @@ class PPO:
         self.apply_reset = apply_reset
 
     def test(self, path):
-        self.actor_critic.load_state_dict(torch.load(path))
+        self.actor_critic.load_state_dict(torch.load(path, map_location=self.device))
         self.actor_critic.eval()
 
     def load(self, path):
-        self.actor_critic.load_state_dict(torch.load(path))
+        self.actor_critic.load_state_dict(torch.load(path, map_location=self.device))
         self.current_learning_iteration = int(path.split("_")[-1].split(".")[0])
         self.actor_critic.train()
 
@@ -101,15 +101,20 @@ class PPO:
         current_states = self.vec_env.get_state()
 
         if self.is_testing:
-            while True:
-                with torch.no_grad():
-                    if self.apply_reset:
-                        current_obs = self.vec_env.reset()
-                    # Compute the action
-                    actions = self.actor_critic.act_inference(current_obs)
-                    # Step the vec_environment
-                    next_obs, rews, dones, infos = self.vec_env.step(actions)
-                    current_obs.copy_(next_obs)
+            for it in range(num_learning_iterations):
+                dones = torch.tensor([0])
+                # for _ in range(self.num_transitions_per_env):
+                while not torch.all(dones):
+                    with torch.no_grad():
+                        if self.apply_reset:
+                            current_obs = self.vec_env.reset()
+                        # Compute the action
+                        actions = self.actor_critic.act_inference(current_obs)
+                        # Step the vec_environment
+                        next_obs, rews, dones, infos = self.vec_env.step(actions)
+                        current_obs.copy_(next_obs)
+
+                print(f" \033[1m Learning iteration {it+1}/{num_learning_iterations} \033[0m ")
         else:
             rewbuffer = deque(maxlen=100)
             lenbuffer = deque(maxlen=100)

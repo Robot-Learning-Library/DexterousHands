@@ -184,8 +184,10 @@ class ShadowHandCatchUnderarm(BaseTask):
 
         # Viewer settings, including the camera's initial position and viewing direction
         if self.viewer != None:
-            cam_pos = gymapi.Vec3(10.0, 5.0, 1.0)
-            cam_target = gymapi.Vec3(6.0, 5.0, 0.0)
+            # cam_pos = gymapi.Vec3(10.0, 5.0, 1.0)
+            # cam_target = gymapi.Vec3(6.0, 5.0, 0.0)
+            cam_pos = gymapi.Vec3(0.8, -0.2, 1.5)
+            cam_target = gymapi.Vec3(-0.2, -0.2, 0.0)
             self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
 
         # Get gym GPU state tensors

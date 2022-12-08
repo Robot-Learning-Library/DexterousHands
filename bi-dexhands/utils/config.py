@@ -254,7 +254,7 @@ def get_args(benchmark=False, use_rlg_config=False):
         {"name": "--episode_length", "type": int, "default": 0,
             "help": "Episode length, by default is read from yaml config"},
         {"name": "--seed", "type": int, "help": "Random seed"},
-        {"name": "--max_iterations", "type": int, "default": 0,
+        {"name": "--max_iterations", "type": int, "default": -1,
             "help": "Set a maximum number of training iterations"},
         {"name": "--steps_num", "type": int, "default": -1,
             "help": "Set number of simulation steps per 1 PPO iteration. Supported only by rl_games. If not -1 overrides the config settings."},
@@ -282,6 +282,8 @@ def get_args(benchmark=False, use_rlg_config=False):
             "help": "Record video"},
         {"name": "--record_video_interval", "type": int, "default": 100,
             "help": "Interval (episodes) for recording videos"},
+        {"name": "--record_video_path", "type": str, "default": "data/videos",
+            "help": "Path for recording videos"},
     ]
 
     if benchmark:

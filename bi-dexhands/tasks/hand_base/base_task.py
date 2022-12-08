@@ -10,7 +10,7 @@ import os
 import operator
 from copy import deepcopy
 import random
-
+import pyautogui
 from isaacgym import gymapi
 from isaacgym.gymutil import get_property_setter_map, get_property_getter_map, get_default_setter_args, apply_random_samples, check_buckets, generate_random_samples
 
@@ -29,10 +29,11 @@ class BaseTask():
         self.virtual_display = None
         SCREEN_CAPTURE_RESOLUTION = (1027, 768)
         
-        self.virtual_display = None
-        from pyvirtualdisplay.smartdisplay import SmartDisplay
-        self.virtual_display = SmartDisplay(size=SCREEN_CAPTURE_RESOLUTION)
-        self.virtual_display.start()
+        if cfg["record_video"]:  # this will block standard local visualization
+            from pyvirtualdisplay.smartdisplay import SmartDisplay
+            self.virtual_display = SmartDisplay(visible=1, size=SCREEN_CAPTURE_RESOLUTION)  # 1 makes it visible, 0 not
+            self.virtual_display.start()
+            pyautogui.press("tab")  # tab will remove the toolbar on the left side of the screen; only works when window is visible
 
         self.device_type = cfg.get("device_type", "cuda")
         self.device_id = cfg.get("device_id", 0)
@@ -45,8 +46,8 @@ class BaseTask():
 
         # double check!
         self.graphics_device_id = self.device_id
-        if enable_camera_sensors == False and self.headless == True:
-            self.graphics_device_id = -1
+        # if enable_camera_sensors == False and self.headless == True:
+        #     self.graphics_device_id = -1
 
         self.num_envs = cfg["env"]["numEnvs"]
         if is_meta:
@@ -99,8 +100,9 @@ class BaseTask():
         # if running with a viewer, set up keyboard shortcuts and camera
         if self.headless == False:
             # subscribe to keyboard shortcuts
+            cam_props = gymapi.CameraProperties()
             self.viewer = self.gym.create_viewer(
-                self.sim, gymapi.CameraProperties())
+                self.sim, cam_props)
             self.gym.subscribe_viewer_keyboard_event(
                 self.viewer, gymapi.KEY_ESCAPE, "QUIT")
             self.gym.subscribe_viewer_keyboard_event(
@@ -117,6 +119,7 @@ class BaseTask():
 
             self.gym.viewer_camera_look_at(
                 self.viewer, None, cam_pos, cam_target)
+        pyautogui.press("tab")  # tab will remove the toolbar on the left side of the screen
 
     # set gravity based on up axis and return axis index
     def set_sim_params_up_axis(self, sim_params, axis):
@@ -180,7 +183,6 @@ class BaseTask():
             # fetch results
             if self.device != 'cpu':
                 self.gym.fetch_results(self.sim, True)
-
             # step graphics
             if self.enable_viewer_sync:
                 self.gym.step_graphics(self.sim)

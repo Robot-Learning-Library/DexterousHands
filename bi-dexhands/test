@@ -1,0 +1,20 @@
+python train.py --task=ShadowHand --algo=ppo --model_dir=./logs/ShadowHand/ppo/ppo_seed-1/model_10000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+* python train.py --task=ShadowHandBlockStack --algo=ppo --model_dir=./logs/ShadowHandBlockStack/ppo/ppo_seed-1/model_5000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+python train.py --task=ShadowHandBottleCap --algo=ppo --model_dir=./logs/ShadowHandBottleCap/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+python train.py --task=ShadowHandCatchAbreast --algo=ppo --model_dir=./logs/ShadowHandCatchAbreast/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+python train.py --task=ShadowHandCatchOver2Underarm --algo=ppo --model_dir=./logs/ShadowHandCatchOver2Underarm/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+python train.py --task=ShadowHandCatchUnderarm --algo=ppo --model_dir=./logs/ShadowHandCatchUnderarm/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+python train.py --task=ShadowHandDoorCloseInward --algo=ppo --model_dir=./logs/ShadowHandDoorCloseInward/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+python train.py --task=ShadowHandDoorCloseOutward --algo=ppo --model_dir=./logs/ShadowHandDoorCloseOutward/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+python train.py --task=ShadowHandDoorOpenInward --algo=ppo --model_dir=./logs/ShadowHandDoorOpenInward/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+python train.py --task=ShadowHandDoorOpenOutward --algo=ppo --model_dir=./logs/ShadowHandDoorOpenOutward/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+python train.py --task=ShadowHandGraspAndPlace --algo=ppo --model_dir=./logs/ShadowHandGraspAndPlace/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+python train.py --task=ShadowHandKettle --algo=ppo --model_dir=./logs/ShadowHandKettle/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+* python train.py --task=ShadowHandLiftUnderarm --algo=ppo --model_dir=./logs/ShadowHandLiftUnderarm/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+python train.py --task=ShadowHandOver --algo=ppo --model_dir=./logs/ShadowHandOver/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+python train.py --task=ShadowHandPen --algo=ppo --model_dir=./logs/ShadowHandPen/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+* python train.py --task=ShadowHandPushBlock --algo=ppo --model_dir=./logs/ShadowHandPushBlock/ppo/ppo_seed-1/model_57000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+python train.py --task=ShadowHandScissors --algo=ppo --model_dir=./logs/ShadowHandScissors/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+* python train.py --task=ShadowHandSwingCup --algo=ppo --model_dir=./logs/ShadowHandSwingCup/ppo/ppo_seed-1/model_29000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+python train.py --task=ShadowHandSwitch --algo=ppo --model_dir=./logs/ShadowHandSwitch/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
+python train.py --task=ShadowHandTwoCatchUnderarm --algo=ppo --model_dir=./logs/ShadowHandTwoCatchUnderarm/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
