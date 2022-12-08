@@ -284,6 +284,8 @@ def get_args(benchmark=False, use_rlg_config=False):
             "help": "Interval (episodes) for recording videos"},
         {"name": "--record_video_path", "type": str, "default": "data/videos",
             "help": "Path for recording videos"},
+        {"name": "--record_traj", "type": bool, "default": False,
+            "help": "Record the trajectory"},
     ]
 
     if benchmark:

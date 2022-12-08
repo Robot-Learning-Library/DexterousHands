@@ -6,6 +6,9 @@ from algorithms.rl.trpo import TRPO
 
 def process_sarl(args, env, cfg_train, logdir):
     learn_cfg = cfg_train["learn"]
+    print('args: ', args)
+    cfg_train['record_traj'] = args.record_traj
+    cfg_train['record_traj_path'] = f"{args.record_video_path}/{args.task}_{args.algo}_{args.save_time_stamp}"  # same path as video
     is_testing = learn_cfg["test"]
     # is_testing = True
     # Override resume and testing flags if they are passed as parameters.
