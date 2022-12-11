@@ -123,9 +123,11 @@ class PPO:
                             traj_info['dones'].append(dones.cpu().numpy())
                             traj_info['next_obs'].append(next_obs.cpu().numpy())
                 if self.record_traj:
-                    with open(self.record_traj_path+f'/traj-episode-{it}.pkl', 'wb') as f:
+                    with open(self.record_traj_path+f'traj-episode-{it}.pkl', 'wb') as f:
                         pickle.dump(traj_info, f)
                 print(f" \033[1m Learning iteration {it+1}/{num_learning_iterations} \033[0m ")
+            self.vec_env.task.virtual_display.stop()
+            
         else:
             rewbuffer = deque(maxlen=100)
             lenbuffer = deque(maxlen=100)

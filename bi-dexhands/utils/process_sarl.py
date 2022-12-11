@@ -8,7 +8,14 @@ def process_sarl(args, env, cfg_train, logdir):
     learn_cfg = cfg_train["learn"]
     print('args: ', args)
     cfg_train['record_traj'] = args.record_traj
-    cfg_train['record_traj_path'] = f"{args.record_video_path}/{args.task}_{args.algo}_{args.save_time_stamp}"  # same path as video
+    if args.model_dir is not None:
+        # /logs/ShadowHand/ppo/ppo_seed3/model_20000.pt
+        train_seed = args.model_dir.split("/")[-2].split("seed")[-1]
+        checkpoint = args.model_dir.split("/")[-1].split(".")[0].split("_")[-1]
+    else:
+        train_seed = ''
+        checkpoint = ''
+    cfg_train['record_traj_path'] = f"{args.record_video_path}/{args.task}/{args.task}_{args.algo}_{train_seed}_{args.save_time_stamp}_{checkpoint}_"  # same path as video
     is_testing = learn_cfg["test"]
     # is_testing = True
     # Override resume and testing flags if they are passed as parameters.

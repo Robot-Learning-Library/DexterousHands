@@ -32,7 +32,7 @@ class BaseTask():
         if cfg["record_video"]:  # this will block standard local visualization
             from pyvirtualdisplay.smartdisplay import SmartDisplay
             if cfg['test']:
-                self.virtual_display = SmartDisplay(visible=1, size=SCREEN_CAPTURE_RESOLUTION)  # 1 makes it visible, 0 not
+                self.virtual_display = SmartDisplay(visible=1, size=SCREEN_CAPTURE_RESOLUTION, extra_args=['-once'])  # 1 makes it visible, 0 not
                 self.virtual_display.start()
                 pyautogui.press("tab")  # tab will remove the toolbar on the left side of the screen; only works when window is visible
             else:
