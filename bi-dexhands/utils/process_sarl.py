@@ -8,7 +8,7 @@ def process_sarl(args, env, cfg_train, logdir):
     learn_cfg = cfg_train["learn"]
     print('args: ', args)
     cfg_train['record_traj'] = args.record_traj
-    if args.model_dir is not None:
+    if args.model_dir is not None and len(args.model_dir) > 0:
         # /logs/ShadowHand/ppo/ppo_seed3/model_20000.pt
         train_seed = args.model_dir.split("/")[-2].split("seed")[-1]
         checkpoint = args.model_dir.split("/")[-1].split(".")[0].split("_")[-1]
