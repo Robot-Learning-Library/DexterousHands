@@ -382,11 +382,12 @@ class ShadowHandGraspAndPlace(BaseTask):
         object_asset_options.override_inertia = True
         object_asset_options.vhacd_enabled = True
         object_asset_options.vhacd_params = gymapi.VhacdParams()
-        object_asset_options.vhacd_params.resolution = 100000
+        object_asset_options.vhacd_params.resolution = 1000000
         object_asset_options.default_dof_drive_mode = gymapi.DOF_MODE_NONE
 
         object_asset = self.gym.load_asset(self.sim, asset_root, object_asset_file, object_asset_options)
         block_asset_file = "urdf/objects/cube_multicolor1.urdf"
+        object_asset_options.density = 200
         block_asset = self.gym.load_asset(self.sim, asset_root, block_asset_file, object_asset_options)
 
         object_asset_options.disable_gravity = True
@@ -521,8 +522,8 @@ class ShadowHandGraspAndPlace(BaseTask):
 
 
             # add hand - collision filter = -1 to use asset collision filters set in mjcf loader
-            shadow_hand_actor = self.gym.create_actor(env_ptr, shadow_hand_asset, shadow_hand_start_pose, "hand", i, -1, 0)
-            shadow_hand_another_actor = self.gym.create_actor(env_ptr, shadow_hand_another_asset, shadow_another_hand_start_pose, "another_hand", i, -1, 0)
+            shadow_hand_actor = self.gym.create_actor(env_ptr, shadow_hand_asset, shadow_hand_start_pose, "hand", i, 0, 0)
+            shadow_hand_another_actor = self.gym.create_actor(env_ptr, shadow_hand_another_asset, shadow_another_hand_start_pose, "another_hand", i, 0, 0)
             
             self.hand_start_states.append([shadow_hand_start_pose.p.x, shadow_hand_start_pose.p.y, shadow_hand_start_pose.p.z,
                                            shadow_hand_start_pose.r.x, shadow_hand_start_pose.r.y, shadow_hand_start_pose.r.z, shadow_hand_start_pose.r.w,
@@ -637,6 +638,8 @@ class ShadowHandGraspAndPlace(BaseTask):
         self.table_indices = to_torch(self.table_indices, dtype=torch.long, device=self.device)
         self.block_indices = to_torch(self.block_indices, dtype=torch.long, device=self.device)
 
+        self.block_right_handle_up_axis = to_torch([0, 1, 0], device=self.device).repeat((self.num_envs, 1))
+
     def compute_reward(self, actions):
         """
         Compute the reward of all environment. The core function is compute_hand_reward(
@@ -655,7 +658,7 @@ class ShadowHandGraspAndPlace(BaseTask):
         """
         self.rew_buf[:], self.reset_buf[:], self.reset_goal_buf[:], self.progress_buf[:], self.successes[:], self.consecutive_successes[:] = compute_hand_reward(
             self.rew_buf, self.reset_buf, self.reset_goal_buf, self.progress_buf, self.successes, self.consecutive_successes,
-            self.max_episode_length, self.object_pos, self.object_rot, self.goal_pos, self.goal_rot, self.block_right_handle_pos, self.block_left_handle_pos, 
+            self.max_episode_length, self.object_pos, self.object_rot, self.goal_pos, self.goal_rot, self.block_right_handle_pos, self.block_left_handle_pos, self.block_right_handle_rot, self.block_right_handle_up_axis, self.num_envs,
             self.left_hand_pos, self.right_hand_pos, self.right_hand_ff_pos, self.right_hand_mf_pos, self.right_hand_rf_pos, self.right_hand_lf_pos, self.right_hand_th_pos, 
             self.left_hand_ff_pos, self.left_hand_mf_pos, self.left_hand_rf_pos, self.left_hand_lf_pos, self.left_hand_th_pos, 
             self.dist_reward_scale, self.rot_reward_scale, self.rot_eps, self.actions, self.action_penalty_scale,
@@ -1092,6 +1095,8 @@ class ShadowHandGraspAndPlace(BaseTask):
 
         self.hand_positions[all_indices.to(torch.long), :] = self.saved_root_tensor[all_indices.to(torch.long), 0:3]
         self.hand_orientations[all_indices.to(torch.long), :] = self.saved_root_tensor[all_indices.to(torch.long), 3:7]
+        # self.hand_linvels[all_indices.to(torch.long), :] = self.saved_root_tensor[all_indices.to(torch.long), 7:10]
+        # self.hand_angvels[all_indices.to(torch.long), :] = self.saved_root_tensor[all_indices.to(torch.long), 10:13]
 
         self.gym.set_dof_state_tensor_indexed(self.sim,
                                               gymtorch.unwrap_tensor(self.dof_state),
@@ -1212,7 +1217,7 @@ class ShadowHandGraspAndPlace(BaseTask):
 
     def add_debug_lines(self, env, pos, rot):
         posx = (pos + quat_apply(rot, to_torch([1, 0, 0], device=self.device) * 0.2)).cpu().numpy()
-        posy = (pos + quat_apply(rot, to_torch([0, 1, 0], device=self.device) * 0.2)).cpu().numpy()
+        posy = (pos + quat_apply(rot, to_torch([0, 1, 0], device=self.device) * 1.2)).cpu().numpy()
         posz = (pos + quat_apply(rot, to_torch([0, 0, 1], device=self.device) * 0.2)).cpu().numpy()
 
         p0 = pos.cpu().numpy()
@@ -1295,7 +1300,7 @@ def depth_image_to_point_cloud_GPU(camera_tensor, camera_view_matrix_inv, camera
 @torch.jit.script
 def compute_hand_reward(
     rew_buf, reset_buf, reset_goal_buf, progress_buf, successes, consecutive_successes,
-    max_episode_length: float, object_pos, object_rot, target_pos, target_rot, block_right_handle_pos, block_left_handle_pos,
+    max_episode_length: float, object_pos, object_rot, target_pos, target_rot, block_right_handle_pos, block_left_handle_pos, block_right_handle_rot, block_right_handle_up_axis, num_envs: int,
     left_hand_pos, right_hand_pos, right_hand_ff_pos, right_hand_mf_pos, right_hand_rf_pos, right_hand_lf_pos, right_hand_th_pos,
     left_hand_ff_pos, left_hand_mf_pos, left_hand_rf_pos, left_hand_lf_pos, left_hand_th_pos,
     dist_reward_scale: float, rot_reward_scale: float, rot_eps: float,
@@ -1384,10 +1389,8 @@ def compute_hand_reward(
     # quat_diff = quat_mul(object_rot, quat_conjugate(target_rot))
     # rot_dist = 2.0 * torch.asin(torch.clamp(torch.norm(quat_diff[:, 0:3], p=2, dim=-1), max=1.0))
 
-    right_hand_dist_rew = torch.exp(-10 * right_hand_finger_dist)
-    left_hand_dist_rew = torch.exp(-10 * left_hand_finger_dist)
-
-    # rot_rew = 1.0/(torch.abs(rot_dist) + rot_eps) * rot_reward_scale
+    right_hand_dist_rew = torch.clamp(- right_hand_finger_dist * 0.5, -0.75, -0.25)
+    left_hand_dist_rew = torch.clamp(- left_hand_finger_dist * 0.5, -0.75, -0.25)
 
     action_penalty = torch.sum(actions ** 2, dim=-1)
 
@@ -1396,16 +1399,34 @@ def compute_hand_reward(
     # up_rew = torch.zeros_like(right_hand_dist_rew)
     # up_rew = torch.where(right_hand_finger_dist < 0.6,
     #                 torch.where(left_hand_finger_dist < 0.4,
+
+    # up_ward_reward = 
+    axis1 = quat_apply(block_right_handle_rot, block_right_handle_up_axis)
+    axis2 = (block_left_handle_pos - block_right_handle_pos) / torch.norm(block_left_handle_pos - block_right_handle_pos, p=2, dim=-1).unsqueeze(-1)
+
+    dot1 = torch.bmm(axis1.view(num_envs, 1, 3), axis2.view(num_envs, 3, 1)).squeeze(-1).squeeze(-1)  # alignment of forward axis for gripper
+    rot_reward = 1 * (torch.sign(dot1) * dot1 ** 2)
+    # print(axis1[0])
+    # print(axis2[0])
+    # print(rot_reward[0])
+
     up_rew = torch.zeros_like(right_hand_dist_rew)
-    up_rew = torch.exp(-10 * torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1)) * 2
-    # up_rew =  torch.where(right_hand_finger_dist <= 0.3, torch.norm(bottle_cap_up - bottle_pos, p=2, dim=-1) * 30, up_rew)
+    up_rew = (2 - 5 * torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1)) * (rot_reward + 2)
+    # up_rew = torch.where(torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1) <= 0.1, up_rew * 2, up_rew)
 
+    rot_reward = rot_reward * (1 - 2.5 * torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1))
     # reward = torch.exp(-0.1*(right_hand_dist_rew * dist_reward_scale)) + torch.exp(-0.1*(left_hand_dist_rew * dist_reward_scale))
-    reward = right_hand_dist_rew + left_hand_dist_rew + up_rew
+    reward = 1 + right_hand_dist_rew + left_hand_dist_rew + rot_reward
+    # print("right_hand_dist_rew: ", right_hand_dist_rew[0])
+    # print("left_hand_dist_rew: ", left_hand_dist_rew[0])
+    # print("up_rew: ", up_rew[0])
+    # print("rot_reward: ", rot_reward[0])
+    # print("torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1): ", torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1)[0])
 
-    resets = torch.where(right_hand_dist_rew <= 0, torch.ones_like(reset_buf), reset_buf)
-    resets = torch.where(right_hand_finger_dist >= 1.5, torch.ones_like(resets), resets)
+    # resets = torch.where(right_hand_dist_rew <= 0, torch.ones_like(reset_buf), reset_buf)
+    resets = torch.where(right_hand_finger_dist >= 1.5, torch.ones_like(reset_buf), reset_buf)
     resets = torch.where(left_hand_finger_dist >= 1.5, torch.ones_like(resets), resets)
+    resets = torch.where(torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1) >= 0.5, torch.ones_like(resets), resets)
 
     # Find out which envs hit the goal and update successes count
     successes = torch.where(successes == 0, 

@@ -84,6 +84,7 @@ def parse_task(args, cfg, cfg_train, sim_params, agent_index):
     elif args.task_type == "Python":
         print("Python")
         cfg["record_video"] = args.record_video
+        cfg["test"] = args.test
         try:
             task = eval(args.task)(
                 cfg=cfg,
@@ -104,10 +105,18 @@ def parse_task(args, cfg, cfg_train, sim_params, agent_index):
                 record_video_interval = int(1e2)
             task.is_vector_env = True
             if args.test:
-                task = gym.wrappers.RecordVideo(task, f"{args.record_video_path}/{args.task}_{args.algo}_{args.save_time_stamp}",\
+                if args.model_dir is not None:
+                    # /logs/ShadowHand/ppo/ppo_seed3/model_20000.pt
+                    train_seed = args.model_dir.split("/")[-2].split("seed")[-1]
+                    checkpoint = args.model_dir.split("/")[-1].split(".")[0].split("_")[-1]
+                else:
+                    train_seed = ''
+                    checkpoint = ''
+                task = gym.wrappers.RecordVideo(task, f"{args.record_video_path}/{args.task}/",\
                         # step_trigger=lambda step: step % record_video_interval == 0, # record the videos every record_video_interval steps
                         episode_trigger=lambda episode: episode % record_video_interval == 0, # record the videos every record_video_interval episodes
                         # video_length=record_video_length, 
+                        name_prefix = f"{args.task}_{args.algo}_{train_seed}_{args.save_time_stamp}_{checkpoint}_video"
                         )
             else:
                 record_video_length = 300
