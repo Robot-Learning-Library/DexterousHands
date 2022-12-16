@@ -487,7 +487,6 @@ class ShadowHandLiftUnderarm(BaseTask):
             if self.aggregate_mode >= 1:
                 self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
-
             # add hand - collision filter = -1 to use asset collision filters set in mjcf loader
             shadow_hand_actor = self.gym.create_actor(env_ptr, shadow_hand_asset, shadow_hand_start_pose, "hand", i, 0, 0)
             shadow_hand_another_actor = self.gym.create_actor(env_ptr, shadow_hand_another_asset, shadow_another_hand_start_pose, "another_hand", i, 0, 0)
@@ -543,6 +542,7 @@ class ShadowHandLiftUnderarm(BaseTask):
             goal_handle = self.gym.create_actor(env_ptr, goal_asset, goal_start_pose, "goal_object", i + self.num_envs, 0, 0)
             goal_object_idx = self.gym.get_actor_index(env_ptr, goal_handle, gymapi.DOMAIN_SIM)
             self.goal_object_indices.append(goal_object_idx)
+            self.gym.set_actor_scale(env_ptr, goal_handle, 0.01)
 
             # add table
             table_handle = self.gym.create_actor(env_ptr, table_asset, table_pose, "table", i, -1, 0)

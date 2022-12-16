@@ -106,7 +106,6 @@ class ActorCritic(nn.Module):
 
         return actions_log_prob, entropy, value, actions_mean, self.log_std.repeat(actions_mean.shape[0], 1)
 
-
 def get_activation(act_name):
     if act_name == "elu":
         return nn.ELU()

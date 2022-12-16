@@ -85,6 +85,50 @@ class PPO:
         self.record_traj_path = self.cfg_train["record_traj_path"]
 
         self.apply_reset = apply_reset
+        
+        self.demonstration_path = '/home/jmji/human_like/demo/ShadowHandPen_ppo_3_20221211062238_20000_traj-episode-3.pkl'
+        # self.demonstration_path = './action_seq.pkl'
+        print("Load demo: {}".format(self.demonstration_path))
+        with open(self.demonstration_path, "rb") as f:
+            self.all_demonstration_dict = pickle.load(f)
+            self.demo_dict = {"actions": torch.tensor(self.all_demonstration_dict['actions'], device=self.device),
+                            "observations": torch.tensor(self.all_demonstration_dict['next_obs'], device=self.device),
+                            "dones": torch.tensor(self.all_demonstration_dict['dones'], device=self.device),}
+
+        transition_length = self.demo_dict["observations"].shape[0]
+        self.hand_dof_pos_historical_memory = torch.zeros((self.demo_dict["observations"].shape[0], 5, 48), dtype=torch.float, device=self.device)
+        for i in range(5):
+            self.hand_dof_pos_historical_memory[i:, i, 0:24] = self.demo_dict["observations"][:transition_length-i, 0, 0:24]
+            self.hand_dof_pos_historical_memory[i:, i, 24:48] = self.demo_dict["observations"][:transition_length-i, 0, 199:223]
+
+        self.cur_hand_dof_pos_historical = torch.zeros((self.vec_env.num_envs, 5, 48), dtype=torch.float, device=self.device)
+
+        self.load("/home/jmji/model_20000.pt")
+
+    def compute_intrinsic_reward(self, cur_state, extrinsic_reward):
+        intrinsic_reward = torch.zeros((self.vec_env.num_envs, 1), dtype=torch.float, device=self.device)
+
+        for i in range(5-1):
+            self.cur_hand_dof_pos_historical[:, i+1, 0:48] = self.cur_hand_dof_pos_historical[:, i, 0:48].clone()
+        self.cur_hand_dof_pos_historical[:, 0, 0:24] = cur_state[:, 0:24].clone()
+        self.cur_hand_dof_pos_historical[:, 0, 24:48] = cur_state[:, 199:223].clone()
+
+        # one env loss
+        epsilon = 0.001
+        def kernel_function(x, y):
+            # Here ya go
+            # dist = (tensor1 - tensor2).pow(2).sum(3).sqrt()
+            # Basically that's what Euclidean distance is.
+            # Subtract -> power by 2 -> sum along the unfortunate axis you want to eliminate-> square root
+    
+            return epsilon / (epsilon + (x - y).pow(2).sum(2).sqrt().sum(1))
+
+        for i in range(self.hand_dof_pos_historical_memory.shape[0]):
+            intrinsic_reward += (kernel_function(self.cur_hand_dof_pos_historical, self.hand_dof_pos_historical_memory[i])).unsqueeze(-1)
+
+        intrinsic_reward = 1 / (intrinsic_reward + 0.01).sqrt() / 10
+        intrinsic_reward = intrinsic_reward.squeeze(-1) * extrinsic_reward
+        return intrinsic_reward
 
     def test(self, path):
         self.actor_critic.load_state_dict(torch.load(path, map_location=self.device))
@@ -150,7 +194,12 @@ class PPO:
                     actions, actions_log_prob, values, mu, sigma = self.actor_critic.act(current_obs, current_states)
                     # Step the vec_environment
                     next_obs, rews, dones, infos = self.vec_env.step(actions)
+                    # next_obs, rews, dones, infos = self.vec_env.step(self.demo_dict["actions"][id])
+                    # id += 1
                     next_states = self.vec_env.get_state()
+                    intrinsic_reward = self.compute_intrinsic_reward(current_obs, rews)
+                    rews += intrinsic_reward
+                    infos["intrinsic_reward"] = intrinsic_reward
 
                     # Record the transition
                     self.storage.add_transitions(current_obs, current_states, actions, rews, dones, values, actions_log_prob, mu, sigma)
