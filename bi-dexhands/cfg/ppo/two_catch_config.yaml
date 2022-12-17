@@ -19,7 +19,7 @@ learn:
 
   # training params
   cliprange: 0.2
-  ent_coef: 0.05
+  ent_coef: 0.02
   nsteps: 8
   noptepochs: 5
   nminibatches: 4 # this is per agent
