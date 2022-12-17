@@ -57,27 +57,6 @@ class PPO:
         self.actor_critic = ActorCritic(self.observation_space.shape, self.state_space.shape, self.action_space.shape,
                                                self.init_noise_std, self.model_cfg, asymmetric=asymmetric)
         self.actor_critic.to(self.device)
-
-        self.other_primitive_actor_critic_list = []
-        self.learned_model = learn_cfg["learned_seed"].split(",")
-        self.valid_primitive_list = len(self.learned_model)*[False]
-        self.imitation_scale = 4
-
-        for i in range(len(self.learned_model)):
-            self.other_primitive_actor_critic_list.append(ActorCritic(self.observation_space.shape, self.state_space.shape, self.action_space.shape,
-                                                self.init_noise_std, self.model_cfg, asymmetric=asymmetric).to(self.device))
-
-        for i, actor_critic in enumerate(self.other_primitive_actor_critic_list):
-            path = log_dir.split("ppo")
-            try:
-                path = os.path.join(path[0]) + "/ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i])
-                actor_critic.load_state_dict(torch.load(path, map_location=self.device))
-                actor_critic.eval()
-                self.valid_primitive_list[i] = True
-            except:
-                print("No learned model found under path: /ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i]))
-                self.valid_primitive_list[i] = False
-
         self.storage = RolloutStorage(self.vec_env.num_envs, self.num_transitions_per_env, self.observation_space.shape,
                                       self.state_space.shape, self.action_space.shape, self.device, sampler)
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=self.learning_rate)
@@ -133,7 +112,7 @@ class PPO:
                         if self.apply_reset:
                             current_obs = self.vec_env.reset()
                         # Compute the action
-                        actions, actions_log_prob, values, mu, sigma = self.actor_critic.act(current_obs, current_states)
+                        actions = self.actor_critic.act_inference(current_obs)
                         # Step the vec_environment
                         next_obs, rews, dones, infos = self.vec_env.step(actions)
                         current_obs.copy_(next_obs)
@@ -171,8 +150,6 @@ class PPO:
                     actions, actions_log_prob, values, mu, sigma = self.actor_critic.act(current_obs, current_states)
                     # Step the vec_environment
                     next_obs, rews, dones, infos = self.vec_env.step(actions)
-                    # next_obs, rews, dones, infos = self.vec_env.step(self.demo_dict["actions"][id])
-                    # id += 1
                     next_states = self.vec_env.get_state()
 
                     # Record the transition
@@ -207,7 +184,7 @@ class PPO:
                 # Learning step
                 start = stop
                 self.storage.compute_returns(last_values, self.gamma, self.lam)
-                mean_value_loss, mean_surrogate_loss, mean_imitation_loss = self.update()
+                mean_value_loss, mean_surrogate_loss = self.update()
                 self.storage.clear()
                 stop = time.time()
                 learn_time = stop - start
@@ -236,7 +213,6 @@ class PPO:
 
         self.writer.add_scalar('Loss/value_function', locs['mean_value_loss'], locs['it'])
         self.writer.add_scalar('Loss/surrogate', locs['mean_surrogate_loss'], locs['it'])
-        self.writer.add_scalar('Loss/imitation', locs['mean_imitation_loss'], locs['it'])
         self.writer.add_scalar('Policy/mean_noise_std', mean_std.item(), locs['it'])
         if len(locs['rewbuffer']) > 0:
             self.writer.add_scalar('Train/mean_reward', statistics.mean(locs['rewbuffer']), locs['it'])
@@ -258,7 +234,6 @@ class PPO:
                               'collection_time']:.3f}s, learning {locs['learn_time']:.3f}s)\n"""
                           f"""{'Value function loss:':>{pad}} {locs['mean_value_loss']:.4f}\n"""
                           f"""{'Surrogate loss:':>{pad}} {locs['mean_surrogate_loss']:.4f}\n"""
-                          f"""{'Imitation loss:':>{pad}} {locs['mean_imitation_loss']:.4f}\n"""
                           f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
                           f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.2f}\n"""
                           f"""{'Mean episode length:':>{pad}} {statistics.mean(locs['lenbuffer']):.2f}\n"""
@@ -287,7 +262,6 @@ class PPO:
     def update(self):
         mean_value_loss = 0
         mean_surrogate_loss = 0
-        mean_imitation_loss = 0
 
         batch = self.storage.mini_batch_generator(self.num_mini_batches)
         for epoch in range(self.num_learning_epochs):
@@ -311,19 +285,6 @@ class PPO:
                 actions_log_prob_batch, entropy_batch, value_batch, mu_batch, sigma_batch = self.actor_critic.evaluate(obs_batch,
                                                                                                                        states_batch,
                                                                                                                        actions_batch)
-
-                # Imitation loss
-                imitation_loss = 0
-                for i, (other_actor_critic, valid) in enumerate(zip(self.other_primitive_actor_critic_list, self.valid_primitive_list)):
-                    if valid:
-                        other_actor_critic_actions, _, _, _, _ = other_actor_critic.act(obs_batch, states_batch)
-
-                        other_actor_critic_actions_log_prob_batch, _, _, _, _ = self.actor_critic.evaluate(obs_batch,
-                                                                                                        states_batch,
-                                                                                                        other_actor_critic_actions)
-
-                        imitation_loss += (- 1 / (1 + (other_actor_critic_actions_log_prob_batch).mean()))
-                imitation_loss = imitation_loss / (sum(self.valid_primitive_list)) * self.imitation_scale
 
                 # KL
                 if self.desired_kl != None and self.schedule == 'adaptive':
@@ -357,7 +318,7 @@ class PPO:
                 else:
                     value_loss = (returns_batch - value_batch).pow(2).mean()
 
-                loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + imitation_loss
+                loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
 
                 # Gradient step
                 self.optimizer.zero_grad()
@@ -365,13 +326,11 @@ class PPO:
                 nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
                 self.optimizer.step()
 
-                mean_imitation_loss += imitation_loss.item()
                 mean_value_loss += value_loss.item()
                 mean_surrogate_loss += surrogate_loss.item()
 
         num_updates = self.num_learning_epochs * self.num_mini_batches
-        mean_imitation_loss /= num_updates
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
 
-        return mean_value_loss, mean_surrogate_loss, mean_imitation_loss
+        return mean_value_loss, mean_surrogate_loss
