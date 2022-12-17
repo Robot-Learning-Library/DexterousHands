@@ -289,6 +289,8 @@ def get_args(benchmark=False, use_rlg_config=False):
             "help": "Path for recording videos"},
         {"name": "--record_traj", "type": bool, "default": False,
             "help": "Record the trajectory"},
+        {"name": "--learned_seed", "type": str, "default": "",
+            "help": "Learned model's seed, only useful for dppo algorithm"},
     ]
 
     if benchmark:

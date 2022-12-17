@@ -13,12 +13,12 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
-from algorithms.rl.ppo import RolloutStorage
-from algorithms.rl.ppo import ActorCritic
+from algorithms.rl.dppo import RolloutStorage
+from algorithms.rl.dppo import ActorCritic
 
 import copy
 
-class PPO:
+class DPPO:
     def __init__(self,
                  vec_env,
                  cfg_train,
@@ -57,6 +57,21 @@ class PPO:
         self.actor_critic = ActorCritic(self.observation_space.shape, self.state_space.shape, self.action_space.shape,
                                                self.init_noise_std, self.model_cfg, asymmetric=asymmetric)
         self.actor_critic.to(self.device)
+
+        self.other_primitive_actor_critic_list = []
+        self.learned_model = learn_cfg["learned_seed"].split(",")
+        self.imitation_scale = 4
+
+        for i in range(len(self.learned_model)):
+            self.other_primitive_actor_critic_list.append(ActorCritic(self.observation_space.shape, self.state_space.shape, self.action_space.shape,
+                                                self.init_noise_std, self.model_cfg, asymmetric=asymmetric).to(self.device))
+
+        for i, actor_critic in enumerate(self.other_primitive_actor_critic_list):
+            path = log_dir.split("dppo")
+            path = os.path.join(path[0]) + "/ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i])
+            actor_critic.load_state_dict(torch.load(path, map_location=self.device))
+            actor_critic.eval()
+
         self.storage = RolloutStorage(self.vec_env.num_envs, self.num_transitions_per_env, self.observation_space.shape,
                                       self.state_space.shape, self.action_space.shape, self.device, sampler)
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=self.learning_rate)
@@ -85,50 +100,6 @@ class PPO:
         self.record_traj_path = self.cfg_train["record_traj_path"]
 
         self.apply_reset = apply_reset
-        
-        self.demonstration_path = '/home/jmji/human_like/demo/ShadowHandPen_ppo_3_20221211062238_20000_traj-episode-3.pkl'
-        # self.demonstration_path = './action_seq.pkl'
-        print("Load demo: {}".format(self.demonstration_path))
-        with open(self.demonstration_path, "rb") as f:
-            self.all_demonstration_dict = pickle.load(f)
-            self.demo_dict = {"actions": torch.tensor(self.all_demonstration_dict['actions'], device=self.device),
-                            "observations": torch.tensor(self.all_demonstration_dict['next_obs'], device=self.device),
-                            "dones": torch.tensor(self.all_demonstration_dict['dones'], device=self.device),}
-
-        transition_length = self.demo_dict["observations"].shape[0]
-        self.hand_dof_pos_historical_memory = torch.zeros((self.demo_dict["observations"].shape[0], 5, 48), dtype=torch.float, device=self.device)
-        for i in range(5):
-            self.hand_dof_pos_historical_memory[i:, i, 0:24] = self.demo_dict["observations"][:transition_length-i, 0, 0:24]
-            self.hand_dof_pos_historical_memory[i:, i, 24:48] = self.demo_dict["observations"][:transition_length-i, 0, 199:223]
-
-        self.cur_hand_dof_pos_historical = torch.zeros((self.vec_env.num_envs, 5, 48), dtype=torch.float, device=self.device)
-
-        self.load("/home/jmji/model_20000.pt")
-
-    def compute_intrinsic_reward(self, cur_state, extrinsic_reward):
-        intrinsic_reward = torch.zeros((self.vec_env.num_envs, 1), dtype=torch.float, device=self.device)
-
-        for i in range(5-1):
-            self.cur_hand_dof_pos_historical[:, i+1, 0:48] = self.cur_hand_dof_pos_historical[:, i, 0:48].clone()
-        self.cur_hand_dof_pos_historical[:, 0, 0:24] = cur_state[:, 0:24].clone()
-        self.cur_hand_dof_pos_historical[:, 0, 24:48] = cur_state[:, 199:223].clone()
-
-        # one env loss
-        epsilon = 0.001
-        def kernel_function(x, y):
-            # Here ya go
-            # dist = (tensor1 - tensor2).pow(2).sum(3).sqrt()
-            # Basically that's what Euclidean distance is.
-            # Subtract -> power by 2 -> sum along the unfortunate axis you want to eliminate-> square root
-    
-            return epsilon / (epsilon + (x - y).pow(2).sum(2).sqrt().sum(1))
-
-        for i in range(self.hand_dof_pos_historical_memory.shape[0]):
-            intrinsic_reward += (kernel_function(self.cur_hand_dof_pos_historical, self.hand_dof_pos_historical_memory[i])).unsqueeze(-1)
-
-        intrinsic_reward = 1 / (intrinsic_reward + 0.01).sqrt() / 10
-        intrinsic_reward = intrinsic_reward.squeeze(-1) * extrinsic_reward
-        return intrinsic_reward
 
     def test(self, path):
         self.actor_critic.load_state_dict(torch.load(path, map_location=self.device))
@@ -156,7 +127,7 @@ class PPO:
                         if self.apply_reset:
                             current_obs = self.vec_env.reset()
                         # Compute the action
-                        actions = self.actor_critic.act_inference(current_obs)
+                        actions, actions_log_prob, values, mu, sigma = self.actor_critic.act(current_obs, current_states)
                         # Step the vec_environment
                         next_obs, rews, dones, infos = self.vec_env.step(actions)
                         current_obs.copy_(next_obs)
@@ -197,9 +168,6 @@ class PPO:
                     # next_obs, rews, dones, infos = self.vec_env.step(self.demo_dict["actions"][id])
                     # id += 1
                     next_states = self.vec_env.get_state()
-                    intrinsic_reward = self.compute_intrinsic_reward(current_obs, rews)
-                    rews += intrinsic_reward
-                    infos["intrinsic_reward"] = intrinsic_reward
 
                     # Record the transition
                     self.storage.add_transitions(current_obs, current_states, actions, rews, dones, values, actions_log_prob, mu, sigma)
@@ -233,7 +201,7 @@ class PPO:
                 # Learning step
                 start = stop
                 self.storage.compute_returns(last_values, self.gamma, self.lam)
-                mean_value_loss, mean_surrogate_loss = self.update()
+                mean_value_loss, mean_surrogate_loss, mean_imitation_loss = self.update()
                 self.storage.clear()
                 stop = time.time()
                 learn_time = stop - start
@@ -262,6 +230,7 @@ class PPO:
 
         self.writer.add_scalar('Loss/value_function', locs['mean_value_loss'], locs['it'])
         self.writer.add_scalar('Loss/surrogate', locs['mean_surrogate_loss'], locs['it'])
+        self.writer.add_scalar('Loss/imitation', locs['mean_imitation_loss'], locs['it'])
         self.writer.add_scalar('Policy/mean_noise_std', mean_std.item(), locs['it'])
         if len(locs['rewbuffer']) > 0:
             self.writer.add_scalar('Train/mean_reward', statistics.mean(locs['rewbuffer']), locs['it'])
@@ -283,6 +252,7 @@ class PPO:
                               'collection_time']:.3f}s, learning {locs['learn_time']:.3f}s)\n"""
                           f"""{'Value function loss:':>{pad}} {locs['mean_value_loss']:.4f}\n"""
                           f"""{'Surrogate loss:':>{pad}} {locs['mean_surrogate_loss']:.4f}\n"""
+                          f"""{'Imitation loss:':>{pad}} {locs['mean_imitation_loss']:.4f}\n"""
                           f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
                           f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.2f}\n"""
                           f"""{'Mean episode length:':>{pad}} {statistics.mean(locs['lenbuffer']):.2f}\n"""
@@ -311,6 +281,7 @@ class PPO:
     def update(self):
         mean_value_loss = 0
         mean_surrogate_loss = 0
+        mean_imitation_loss = 0
 
         batch = self.storage.mini_batch_generator(self.num_mini_batches)
         for epoch in range(self.num_learning_epochs):
@@ -334,6 +305,18 @@ class PPO:
                 actions_log_prob_batch, entropy_batch, value_batch, mu_batch, sigma_batch = self.actor_critic.evaluate(obs_batch,
                                                                                                                        states_batch,
                                                                                                                        actions_batch)
+
+                # Imitation loss
+                imitation_loss = 0
+                for i, other_actor_critic in enumerate(self.other_primitive_actor_critic_list):
+                    other_actor_critic_actions, _, _, _, _ = other_actor_critic.act(obs_batch, states_batch)
+
+                    other_actor_critic_actions_log_prob_batch, _, _, _, _ = self.actor_critic.evaluate(obs_batch,
+                                                                                                    states_batch,
+                                                                                                    other_actor_critic_actions)
+
+                    imitation_loss += (- 1 / (1 + (other_actor_critic_actions_log_prob_batch).mean()))
+                imitation_loss = imitation_loss / (len(self.learned_model)) * self.imitation_scale
 
                 # KL
                 if self.desired_kl != None and self.schedule == 'adaptive':
@@ -367,7 +350,7 @@ class PPO:
                 else:
                     value_loss = (returns_batch - value_batch).pow(2).mean()
 
-                loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
+                loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + imitation_loss
 
                 # Gradient step
                 self.optimizer.zero_grad()
@@ -375,11 +358,13 @@ class PPO:
                 nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
                 self.optimizer.step()
 
+                mean_imitation_loss += imitation_loss.item()
                 mean_value_loss += value_loss.item()
                 mean_surrogate_loss += surrogate_loss.item()
 
         num_updates = self.num_learning_epochs * self.num_mini_batches
+        mean_imitation_loss /= num_updates
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
 
-        return mean_value_loss, mean_surrogate_loss
+        return mean_value_loss, mean_surrogate_loss, mean_imitation_loss
