@@ -59,6 +59,7 @@ class DPPO:
         self.actor_critic.to(self.device)
 
         self.other_primitive_actor_critic_list = []
+        self.valid_primitive_list = len(self.learned_model)*[False]
         self.learned_model = learn_cfg["learned_seed"].split(",")
         self.imitation_scale = 4
 
@@ -68,9 +69,14 @@ class DPPO:
 
         for i, actor_critic in enumerate(self.other_primitive_actor_critic_list):
             path = log_dir.split("dppo")
-            path = os.path.join(path[0]) + "/ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i])
-            actor_critic.load_state_dict(torch.load(path, map_location=self.device))
-            actor_critic.eval()
+            try:
+                path = os.path.join(path[0]) + "/ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i])
+                actor_critic.load_state_dict(torch.load(path, map_location=self.device))
+                actor_critic.eval()
+                self.valid_primitive_list = True
+            except:
+                print("No learned model found under path: /ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i]))
+                self.valid_primitive_list = False
 
         self.storage = RolloutStorage(self.vec_env.num_envs, self.num_transitions_per_env, self.observation_space.shape,
                                       self.state_space.shape, self.action_space.shape, self.device, sampler)
@@ -308,15 +314,16 @@ class DPPO:
 
                 # Imitation loss
                 imitation_loss = 0
-                for i, other_actor_critic in enumerate(self.other_primitive_actor_critic_list):
-                    other_actor_critic_actions, _, _, _, _ = other_actor_critic.act(obs_batch, states_batch)
+                for i, (other_actor_critic, valid) in enumerate(zip(self.other_primitive_actor_critic_list, self.valid_primitive_list)):
+                    if valid:
+                        other_actor_critic_actions, _, _, _, _ = other_actor_critic.act(obs_batch, states_batch)
 
-                    other_actor_critic_actions_log_prob_batch, _, _, _, _ = self.actor_critic.evaluate(obs_batch,
-                                                                                                    states_batch,
-                                                                                                    other_actor_critic_actions)
+                        other_actor_critic_actions_log_prob_batch, _, _, _, _ = self.actor_critic.evaluate(obs_batch,
+                                                                                                        states_batch,
+                                                                                                        other_actor_critic_actions)
 
-                    imitation_loss += (- 1 / (1 + (other_actor_critic_actions_log_prob_batch).mean()))
-                imitation_loss = imitation_loss / (len(self.learned_model)) * self.imitation_scale
+                        imitation_loss += (- 1 / (1 + (other_actor_critic_actions_log_prob_batch).mean()))
+                imitation_loss = imitation_loss / (sum(self.valid_primitive_list)) * self.imitation_scale
 
                 # KL
                 if self.desired_kl != None and self.schedule == 'adaptive':
