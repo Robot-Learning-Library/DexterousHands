@@ -59,8 +59,8 @@ class DPPO:
         self.actor_critic.to(self.device)
 
         self.other_primitive_actor_critic_list = []
-        self.valid_primitive_list = len(self.learned_model)*[False]
         self.learned_model = learn_cfg["learned_seed"].split(",")
+        self.valid_primitive_list = len(self.learned_model)*[False]
         self.imitation_scale = 4
 
         for i in range(len(self.learned_model)):
