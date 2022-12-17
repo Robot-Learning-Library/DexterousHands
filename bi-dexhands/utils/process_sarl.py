@@ -28,8 +28,9 @@ def process_sarl(args, env, cfg_train, logdir):
         cfg_train["learn"]["max_iterations"] = args.max_iterations
         
     logdir = logdir + "_seed{}".format(env.task.cfg["seed"])    
-    if args.algo == "dppo":
-        learn_cfg["learned_seed"] = args.learned_seed
+    
+    # Only useful for dppo
+    learn_cfg["learned_seed"] = args.learned_seed
 
     """Set up the algo system for training or inferencing."""
     model = eval(args.algo.upper())(vec_env=env,
