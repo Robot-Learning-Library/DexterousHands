@@ -1,4 +1,5 @@
 from algorithms.rl.ppo import PPO
+from algorithms.rl.dppo import DPPO
 from algorithms.rl.sac import SAC
 from algorithms.rl.td3 import TD3
 from algorithms.rl.ddpg import DDPG
@@ -26,7 +27,9 @@ def process_sarl(args, env, cfg_train, logdir):
     if args.max_iterations != -1:
         cfg_train["learn"]["max_iterations"] = args.max_iterations
         
-    logdir = logdir + "_seed{}".format(env.task.cfg["seed"])
+    logdir = logdir + "_seed{}".format(env.task.cfg["seed"])    
+    if args.algo == "dppo":
+        learn_cfg["learned_seed"] = args.learned_seed
 
     """Set up the algo system for training or inferencing."""
     model = eval(args.algo.upper())(vec_env=env,

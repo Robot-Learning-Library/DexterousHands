@@ -26,6 +26,8 @@ class BaseTask():
 
         self.rl_device = None
         self.metadata =  {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 24}
+        self.render_mode = "rgb_array"
+
         self.virtual_display = None
         SCREEN_CAPTURE_RESOLUTION = (1027, 768)
         

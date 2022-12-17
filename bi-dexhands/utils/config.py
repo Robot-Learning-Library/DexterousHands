@@ -68,6 +68,9 @@ def retrieve_cfg(args, use_rlg_config=False):
                     "ShadowHandPushBlock", "ShadowHandSwingCup", "ShadowHandGraspAndPlace", "ShadowHandScissors", "AllegroHandOver", "AllegroHandCatchUnderarm"]:
         return os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)), "cfg/{}/config.yaml".format(args.algo), "cfg/{}.yaml".format(args.task)
 
+    elif args.task in ["ShadowHandTwoCatchUnderarm"]:
+        return os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)), "cfg/{}/two_catch_config.yaml".format(args.algo), "cfg/{}.yaml".format(args.task)
+
     elif args.task in ["ShadowHandLiftUnderarm"]:
         return os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)), "cfg/{}/lift_config.yaml".format(args.algo), "cfg/{}.yaml".format(args.task)
 
@@ -286,6 +289,8 @@ def get_args(benchmark=False, use_rlg_config=False):
             "help": "Path for recording videos"},
         {"name": "--record_traj", "type": bool, "default": False,
             "help": "Record the trajectory"},
+        {"name": "--learned_seed", "type": str, "default": "",
+            "help": "Learned model's seed, only useful for dppo algorithm"},
     ]
 
     if benchmark:

@@ -183,8 +183,10 @@ class ShadowHandPushBlock(BaseTask):
         if self.viewer != None:
             # cam_pos = gymapi.Vec3(10.0, 5.0, 1.0)
             # cam_target = gymapi.Vec3(6.0, 5.0, 0.0)
-            cam_pos = gymapi.Vec3(0.8, 0.3, 1.5)
-            cam_target = gymapi.Vec3(-0.2, 0.3, 0.0)
+            # cam_pos = gymapi.Vec3(0.8, 0.3, 1.5)
+            # cam_target = gymapi.Vec3(-0.2, 0.3, 0.0)
+            cam_pos = gymapi.Vec3(-0.8, 0.3, 1.5)
+            cam_target = gymapi.Vec3(0.2, 0.3, 0.0)
             self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
 
         # get gym GPU state tensors
@@ -575,8 +577,22 @@ class ShadowHandPushBlock(BaseTask):
             # reduce table friction
             table_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, table_handle)
             for object_shape_prop in table_shape_props:
-                object_shape_prop.friction = 0.5
+                object_shape_prop.friction = 1
             self.gym.set_actor_rigid_shape_properties(env_ptr, table_handle, table_shape_props)
+
+            hand_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, shadow_hand_actor)
+            another_hand_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, shadow_hand_another_actor)
+            for object_shape_prop in hand_shape_props:
+                object_shape_prop.friction = 1
+            for object_shape_prop in another_hand_shape_props:
+                object_shape_prop.friction = 1
+            self.gym.set_actor_rigid_shape_properties(env_ptr, shadow_hand_actor, hand_shape_props)
+            self.gym.set_actor_rigid_shape_properties(env_ptr, shadow_hand_another_actor, another_hand_shape_props)
+            
+            object_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, object_handle)
+            for object_shape_prop in object_shape_props:
+                object_shape_prop.friction = 1
+            self.gym.set_actor_rigid_shape_properties(env_ptr, object_handle, object_shape_props)
 
             if self.object_type != "block":
                 self.gym.set_rigid_body_color(
@@ -645,7 +661,7 @@ class ShadowHandPushBlock(BaseTask):
         """
         self.rew_buf[:], self.reset_buf[:], self.reset_goal_buf[:], self.progress_buf[:], self.successes[:], self.consecutive_successes[:] = compute_hand_reward(
             self.rew_buf, self.reset_buf, self.reset_goal_buf, self.progress_buf, self.successes, self.consecutive_successes,
-            self.max_episode_length, self.object_pos, self.object_rot, self.left_goal_pos, self.left_goal_rot, self.left_goal_pos, self.left_goal_rot, self.block_right_handle_pos, self.block_left_handle_pos, 
+            self.max_episode_length, self.object_pos, self.object_rot, self.left_goal_pos, self.left_goal_rot, self.right_goal_pos, self.right_goal_rot, self.block_right_handle_pos, self.block_left_handle_pos, 
             self.left_hand_pos, self.right_hand_pos, self.right_hand_ff_pos, self.right_hand_mf_pos, self.right_hand_rf_pos, self.right_hand_lf_pos, self.right_hand_th_pos, 
             self.left_hand_ff_pos, self.left_hand_mf_pos, self.left_hand_rf_pos, self.left_hand_lf_pos, self.left_hand_th_pos, 
             self.dist_reward_scale, self.rot_reward_scale, self.rot_eps, self.actions, self.action_penalty_scale,
@@ -1082,12 +1098,14 @@ class ShadowHandPushBlock(BaseTask):
                                                         gymtorch.unwrap_tensor(all_hand_indices), len(all_hand_indices))  
 
         all_indices = torch.unique(torch.cat([all_hand_indices,
-                                              self.object_indices,
-                                              self.table_indices,
-                                              self.block_indices]).to(torch.int32))
+                                              self.object_indices[env_ids],
+                                              self.table_indices[env_ids],
+                                              self.block_indices[env_ids]]).to(torch.int32))
 
         self.hand_positions[all_indices.to(torch.long), :] = self.saved_root_tensor[all_indices.to(torch.long), 0:3]
         self.hand_orientations[all_indices.to(torch.long), :] = self.saved_root_tensor[all_indices.to(torch.long), 3:7]
+        self.hand_linvels[all_indices.to(torch.long), :] = self.saved_root_tensor[all_indices.to(torch.long), 7:10]
+        self.hand_angvels[all_indices.to(torch.long), :] = self.saved_root_tensor[all_indices.to(torch.long), 10:13]
 
         self.gym.set_dof_state_tensor_indexed(self.sim,
                                               gymtorch.unwrap_tensor(self.dof_state),
@@ -1381,9 +1399,10 @@ def compute_hand_reward(
     # quat_diff = quat_mul(object_rot, quat_conjugate(target_rot))
     # rot_dist = 2.0 * torch.asin(torch.clamp(torch.norm(quat_diff[:, 0:3], p=2, dim=-1), max=1.0))
 
-    right_hand_dist_rew = 1.2-1*right_hand_finger_dist
-    left_hand_dist_rew = 1.2-1*left_hand_finger_dist
-
+    # right_hand_dist_rew = torch.clamp_max_(1.2-1*right_hand_finger_dist, 0.75) * 0.2
+    # left_hand_dist_rew = torch.clamp_max_(1.2-1*left_hand_finger_dist, 0.75) * 0.2
+    right_hand_dist_rew = (1.2-1*right_hand_finger_dist) * 0.2
+    left_hand_dist_rew = (1.2-1*left_hand_finger_dist) * 0.2
     # rot_rew = 1.0/(torch.abs(rot_dist) + rot_eps) * rot_reward_scale
 
     action_penalty = torch.sum(actions ** 2, dim=-1)
@@ -1391,10 +1410,16 @@ def compute_hand_reward(
     # Total reward is: position distance + orientation alignment + action regularization + success bonus + fall penalty
     # reward = torch.exp(-0.05*(up_rew * dist_reward_scale)) + torch.exp(-0.05*(right_hand_dist_rew * dist_reward_scale)) + torch.exp(-0.05*(left_hand_dist_rew * dist_reward_scale))
     up_rew = torch.zeros_like(right_hand_dist_rew)
-    up_rew = 5 - 5*left_goal_dist - 5*right_goal_dist
+    # up_rew = 2 - 5*left_goal_dist - 5*right_goal_dist
+    up_rew = torch.exp(-2 * (left_goal_dist + right_goal_dist)) * 5 - 2
+    up_rew = torch.where(right_hand_finger_dist <= 0.5, 
+                        torch.where(left_hand_finger_dist <= 0.5, up_rew, torch.zeros_like(up_rew)), torch.zeros_like(up_rew))
 
     # reward = torch.exp(-0.1*(right_hand_dist_rew * dist_reward_scale)) + torch.exp(-0.1*(left_hand_dist_rew * dist_reward_scale))
     reward = right_hand_dist_rew + left_hand_dist_rew + up_rew
+    print("right_hand_dist_rew: ", right_hand_dist_rew[0])
+    print("left_hand_dist_rew: ",left_hand_dist_rew[0])
+    print("up_rew: ",up_rew[0])
 
     resets = torch.where(right_hand_finger_dist >= 1.2, torch.ones_like(reset_buf), reset_buf)
     resets = torch.where(left_hand_finger_dist >= 1.2, torch.ones_like(resets), resets)

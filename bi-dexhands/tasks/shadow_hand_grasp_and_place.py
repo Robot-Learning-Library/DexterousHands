@@ -372,7 +372,7 @@ class ShadowHandGraspAndPlace(BaseTask):
 
         # load manipulated object and goal assets
         object_asset_options = gymapi.AssetOptions()
-        object_asset_options.density = 500
+        object_asset_options.density = 2000
         object_asset_options.fix_base_link = False
         # object_asset_options.collapse_fixed_joints = True
         # object_asset_options.disable_gravity = True
@@ -387,7 +387,7 @@ class ShadowHandGraspAndPlace(BaseTask):
 
         object_asset = self.gym.load_asset(self.sim, asset_root, object_asset_file, object_asset_options)
         block_asset_file = "urdf/objects/cube_multicolor1.urdf"
-        object_asset_options.density = 200
+        object_asset_options.density = 500
         block_asset = self.gym.load_asset(self.sim, asset_root, block_asset_file, object_asset_options)
 
         object_asset_options.disable_gravity = True
@@ -430,7 +430,7 @@ class ShadowHandGraspAndPlace(BaseTask):
         shadow_another_hand_start_pose.r = gymapi.Quat().from_euler_zyx(3.14159, 0, 1.57)
 
         object_start_pose = gymapi.Transform()
-        object_start_pose.p = gymapi.Vec3(0.0, 0.2, 0.6)
+        object_start_pose.p = gymapi.Vec3(0.0, 0.2, 0.62)
         object_start_pose.r = gymapi.Quat().from_euler_zyx(0, 0, 0)
         pose_dx, pose_dy, pose_dz = -1.0, 0.0, -0.0
 
@@ -589,6 +589,29 @@ class ShadowHandGraspAndPlace(BaseTask):
             table_idx = self.gym.get_actor_index(env_ptr, table_handle, gymapi.DOMAIN_SIM)
             self.table_indices.append(table_idx)
             
+            table_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, table_handle)
+            for object_shape_prop in table_shape_props:
+                object_shape_prop.friction = 1
+            self.gym.set_actor_rigid_shape_properties(env_ptr, table_handle, table_shape_props)
+
+            hand_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, shadow_hand_actor)
+            another_hand_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, shadow_hand_another_actor)
+            for object_shape_prop in hand_shape_props:
+                object_shape_prop.friction = 1
+            for object_shape_prop in another_hand_shape_props:
+                object_shape_prop.friction = 1.5
+            self.gym.set_actor_rigid_shape_properties(env_ptr, shadow_hand_actor, hand_shape_props)
+            self.gym.set_actor_rigid_shape_properties(env_ptr, shadow_hand_another_actor, another_hand_shape_props)
+            
+            object_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, object_handle)
+            block_shape_props = self.gym.get_actor_rigid_shape_properties(env_ptr, block_handle)
+            for object_shape_prop in object_shape_props:
+                object_shape_prop.friction = 1
+            for object_shape_prop in block_shape_props:
+                object_shape_prop.friction = 1
+            self.gym.set_actor_rigid_shape_properties(env_ptr, object_handle, object_shape_props)
+            self.gym.set_actor_rigid_shape_properties(env_ptr, block_handle, block_shape_props)
+
             if self.object_type != "block":
                 self.gym.set_rigid_body_color(
                     env_ptr, object_handle, 0, gymapi.MESH_VISUAL, gymapi.Vec3(0.6, 0.72, 0.98))
@@ -658,7 +681,7 @@ class ShadowHandGraspAndPlace(BaseTask):
         """
         self.rew_buf[:], self.reset_buf[:], self.reset_goal_buf[:], self.progress_buf[:], self.successes[:], self.consecutive_successes[:] = compute_hand_reward(
             self.rew_buf, self.reset_buf, self.reset_goal_buf, self.progress_buf, self.successes, self.consecutive_successes,
-            self.max_episode_length, self.object_pos, self.object_rot, self.goal_pos, self.goal_rot, self.block_right_handle_pos, self.block_left_handle_pos, self.block_right_handle_rot, self.block_right_handle_up_axis, self.num_envs,
+            self.max_episode_length, self.object_pos, self.object_rot, self.goal_pos, self.goal_rot, self.block_right_handle_pos, self.block_left_handle_pos, self.block_right_handle_rot, self.block_right_handle_up_axis, self.num_envs, self.z_unit_tensor,
             self.left_hand_pos, self.right_hand_pos, self.right_hand_ff_pos, self.right_hand_mf_pos, self.right_hand_rf_pos, self.right_hand_lf_pos, self.right_hand_th_pos, 
             self.left_hand_ff_pos, self.left_hand_mf_pos, self.left_hand_rf_pos, self.left_hand_lf_pos, self.left_hand_th_pos, 
             self.dist_reward_scale, self.rot_reward_scale, self.rot_eps, self.actions, self.action_penalty_scale,
@@ -1095,8 +1118,8 @@ class ShadowHandGraspAndPlace(BaseTask):
 
         self.hand_positions[all_indices.to(torch.long), :] = self.saved_root_tensor[all_indices.to(torch.long), 0:3]
         self.hand_orientations[all_indices.to(torch.long), :] = self.saved_root_tensor[all_indices.to(torch.long), 3:7]
-        # self.hand_linvels[all_indices.to(torch.long), :] = self.saved_root_tensor[all_indices.to(torch.long), 7:10]
-        # self.hand_angvels[all_indices.to(torch.long), :] = self.saved_root_tensor[all_indices.to(torch.long), 10:13]
+        self.hand_linvels[all_indices.to(torch.long), :] = self.saved_root_tensor[all_indices.to(torch.long), 7:10]
+        self.hand_angvels[all_indices.to(torch.long), :] = self.saved_root_tensor[all_indices.to(torch.long), 10:13]
 
         self.gym.set_dof_state_tensor_indexed(self.sim,
                                               gymtorch.unwrap_tensor(self.dof_state),
@@ -1300,7 +1323,7 @@ def depth_image_to_point_cloud_GPU(camera_tensor, camera_view_matrix_inv, camera
 @torch.jit.script
 def compute_hand_reward(
     rew_buf, reset_buf, reset_goal_buf, progress_buf, successes, consecutive_successes,
-    max_episode_length: float, object_pos, object_rot, target_pos, target_rot, block_right_handle_pos, block_left_handle_pos, block_right_handle_rot, block_right_handle_up_axis, num_envs: int,
+    max_episode_length: float, object_pos, object_rot, target_pos, target_rot, block_right_handle_pos, block_left_handle_pos, block_right_handle_rot, block_right_handle_up_axis, num_envs: int, z_unit_tensor,
     left_hand_pos, right_hand_pos, right_hand_ff_pos, right_hand_mf_pos, right_hand_rf_pos, right_hand_lf_pos, right_hand_th_pos,
     left_hand_ff_pos, left_hand_mf_pos, left_hand_rf_pos, left_hand_lf_pos, left_hand_th_pos,
     dist_reward_scale: float, rot_reward_scale: float, rot_eps: float,
@@ -1390,7 +1413,7 @@ def compute_hand_reward(
     # rot_dist = 2.0 * torch.asin(torch.clamp(torch.norm(quat_diff[:, 0:3], p=2, dim=-1), max=1.0))
 
     right_hand_dist_rew = torch.clamp(- right_hand_finger_dist * 0.5, -0.75, -0.25)
-    left_hand_dist_rew = torch.clamp(- left_hand_finger_dist * 0.5, -0.75, -0.25)
+    left_hand_dist_rew = torch.clamp(- left_hand_finger_dist * 0.5, -0.75, -0.20)
 
     action_penalty = torch.sum(actions ** 2, dim=-1)
 
@@ -1404,29 +1427,40 @@ def compute_hand_reward(
     axis1 = quat_apply(block_right_handle_rot, block_right_handle_up_axis)
     axis2 = (block_left_handle_pos - block_right_handle_pos) / torch.norm(block_left_handle_pos - block_right_handle_pos, p=2, dim=-1).unsqueeze(-1)
 
+    axis3 = z_unit_tensor
+
     dot1 = torch.bmm(axis1.view(num_envs, 1, 3), axis2.view(num_envs, 3, 1)).squeeze(-1).squeeze(-1)  # alignment of forward axis for gripper
+    dot2 = torch.bmm(axis1.view(num_envs, 1, 3), axis3.view(num_envs, 3, 1)).squeeze(-1).squeeze(-1)  # alignment of forward axis for gripper
+
     rot_reward = 1 * (torch.sign(dot1) * dot1 ** 2)
+    bucket_up_reward = torch.sign(dot2) * dot2 ** 2
+    rot_reward = rot_reward * 5
     # print(axis1[0])
     # print(axis2[0])
     # print(rot_reward[0])
 
     up_rew = torch.zeros_like(right_hand_dist_rew)
-    up_rew = (2 - 5 * torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1)) * (rot_reward + 2)
+    # up_rew = (2 - 5 * torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1)) * (rot_reward + bucket_up_reward)
+    up_rew = (2 - 5 * torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1)) * (rot_reward + 1)
+
+    grasp_rew = torch.clamp_max(torch.abs(block_left_handle_pos[:, 2]-0.625), 0.1) * 50
     # up_rew = torch.where(torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1) <= 0.1, up_rew * 2, up_rew)
 
-    rot_reward = rot_reward * (1 - 2.5 * torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1))
+    # rot_reward = rot_reward * bucket_up_reward * 5
     # reward = torch.exp(-0.1*(right_hand_dist_rew * dist_reward_scale)) + torch.exp(-0.1*(left_hand_dist_rew * dist_reward_scale))
-    reward = 1 + right_hand_dist_rew + left_hand_dist_rew + rot_reward
-    # print("right_hand_dist_rew: ", right_hand_dist_rew[0])
-    # print("left_hand_dist_rew: ", left_hand_dist_rew[0])
-    # print("up_rew: ", up_rew[0])
-    # print("rot_reward: ", rot_reward[0])
-    # print("torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1): ", torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1)[0])
+    reward = right_hand_dist_rew + left_hand_dist_rew + rot_reward + up_rew + bucket_up_reward + grasp_rew
+    print("right_hand_dist_rew: ", right_hand_dist_rew[0])
+    print("left_hand_dist_rew: ", left_hand_dist_rew[0])
+    print("up_rew: ", up_rew[0])
+    print("rot_reward: ", rot_reward[0])
+    print("bucket_up_reward: ", bucket_up_reward[0])
+    print("grasp_rew: ", grasp_rew[0])
 
     # resets = torch.where(right_hand_dist_rew <= 0, torch.ones_like(reset_buf), reset_buf)
-    resets = torch.where(right_hand_finger_dist >= 1.5, torch.ones_like(reset_buf), reset_buf)
-    resets = torch.where(left_hand_finger_dist >= 1.5, torch.ones_like(resets), resets)
+    resets = torch.where(right_hand_finger_dist >= 1.1, torch.ones_like(reset_buf), reset_buf)
+    resets = torch.where(left_hand_finger_dist >= 1.1, torch.ones_like(resets), resets)
     resets = torch.where(torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1) >= 0.5, torch.ones_like(resets), resets)
+    resets = torch.where(bucket_up_reward <= 0.8, torch.ones_like(resets), resets)
 
     # Find out which envs hit the goal and update successes count
     successes = torch.where(successes == 0, 

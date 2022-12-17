@@ -1,12 +1,25 @@
-#!/bin/bash
+DATE=`date '+%Y%m%d_%H%M'`
+echo "Save as: " $DATE
 
-TASK=$1
-ALGO=$2
-NUM_ENVS=$3
+# declare -a tasks=('ShadowHand')
 
-echo "Experiments started."
-for seed in $(seq 0 2)
-do
-    python train.py --task $TASK  --seed $seed   --algo=${ALGO} --num_envs=${NUM_ENVS}
+declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandBlockStack' 'ShadowHandCatchUnderarm'
+'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap' 'ShadowHandLiftUnderarm' 'ShadowHandTwoCatchUnderarm'
+'ShadowHandDoorOpenInward' 'ShadowHandDoorOpenOutward' 'ShadowHandDoorCloseInward' 'ShadowHandDoorCloseOutward'
+'ShadowHandPushBlock' 'ShadowHandKettle' 
+'ShadowHandScissors' 'ShadowHandPen' 'ShadowHandSwingCup' 'ShadowHandGraspAndPlace' 'ShadowHandSwitch'
+)
+
+# declare -a tasks=('ShadowHandGraspAndPlace' 'ShadowHandKettle' 'ShadowHandBlockStack' 'ShadowHandLiftUnderarm'
+# 'ShadowHandPushBlock' 'ShadowHandSwingCup' 'ShadowHandDoorOpenInward'
+# )
+
+# declare -a tasks=('ShadowHandPointCloud'  'ShadowHandReOrientation')  # unrecognized tasks
+# declare -a tasks=('ShadowHandGraspAndPlace' 'ShadowHandSwitch' 'ShadowHandDoorCloseOutward') # not solved
+
+mkdir -p log/$DATE
+for i in ${!tasks[@]}; do
+	# nohup python train.py --task=${tasks[$i]} --algo=ppo --record_video=True --wandb_activate=True --wandb_entity=quantumiracle >> log/$DATE/${tasks[$i]}.log &
+	echo nohup python train.py --task=${tasks[$i]}  --seed=5 --rl_device=cuda:$((i % 8)) --sim_device=cuda:$((i % 8)) --graphics_device_id=$((i % 8)) --algo=ppo --headless --num_envs=2048 --max_iterations=20000 : log/$DATE/${tasks[$i]}.log &
+	nohup python train.py --task=${tasks[$i]} --seed=5 --rl_device=cuda:$((i % 8)) --sim_device=cuda:$((i % 8)) --graphics_device_id=$((i % 8)) --algo=ppo --headless --num_envs=2048 --max_iterations=20000  >> log/$DATE/${tasks[$i]}.log &
 done
-echo "Experiments ended."
