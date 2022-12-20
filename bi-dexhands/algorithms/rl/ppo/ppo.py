@@ -63,20 +63,21 @@ class PPO:
         self.valid_primitive_list = len(self.learned_model)*[False]
         self.imitation_scale = 4
 
-        for i in range(len(self.learned_model)):
-            self.other_primitive_actor_critic_list.append(ActorCritic(self.observation_space.shape, self.state_space.shape, self.action_space.shape,
-                                                self.init_noise_std, self.model_cfg, asymmetric=asymmetric).to(self.device))
+        if len(self.learned_model) > 0:
+            for i in range(len(self.learned_model)):
+                self.other_primitive_actor_critic_list.append(ActorCritic(self.observation_space.shape, self.state_space.shape, self.action_space.shape,
+                                                    self.init_noise_std, self.model_cfg, asymmetric=asymmetric).to(self.device))
 
-        for i, actor_critic in enumerate(self.other_primitive_actor_critic_list):
-            path = log_dir.split("ppo")
-            try:
-                path = os.path.join(path[0]) + "/ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i])
-                actor_critic.load_state_dict(torch.load(path, map_location=self.device))
-                actor_critic.eval()
-                self.valid_primitive_list[i] = True
-            except:
-                print("No learned model found under path: /ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i]))
-                self.valid_primitive_list[i] = False
+            for i, actor_critic in enumerate(self.other_primitive_actor_critic_list):
+                path = log_dir.split("ppo")
+                try:
+                    path = os.path.join(path[0]) + "/ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i])
+                    actor_critic.load_state_dict(torch.load(path, map_location=self.device))
+                    actor_critic.eval()
+                    self.valid_primitive_list[i] = True
+                except:
+                    print("No learned model found under path: /ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i]))
+                    self.valid_primitive_list[i] = False
 
         self.storage = RolloutStorage(self.vec_env.num_envs, self.num_transitions_per_env, self.observation_space.shape,
                                       self.state_space.shape, self.action_space.shape, self.device, sampler)
