@@ -185,8 +185,8 @@ class ShadowHandPushBlock(BaseTask):
             # cam_target = gymapi.Vec3(6.0, 5.0, 0.0)
             # cam_pos = gymapi.Vec3(0.8, 0.3, 1.5)
             # cam_target = gymapi.Vec3(-0.2, 0.3, 0.0)
-            cam_pos = gymapi.Vec3(-0.8, 0.3, 1.5)
-            cam_target = gymapi.Vec3(0.2, 0.3, 0.0)
+            cam_pos = gymapi.Vec3(-0.8, -0.2, 1.5)
+            cam_target = gymapi.Vec3(0.2, -0.2, 0.0)
             self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
 
         # get gym GPU state tensors
@@ -1417,9 +1417,9 @@ def compute_hand_reward(
 
     # reward = torch.exp(-0.1*(right_hand_dist_rew * dist_reward_scale)) + torch.exp(-0.1*(left_hand_dist_rew * dist_reward_scale))
     reward = right_hand_dist_rew + left_hand_dist_rew + up_rew
-    print("right_hand_dist_rew: ", right_hand_dist_rew[0])
-    print("left_hand_dist_rew: ",left_hand_dist_rew[0])
-    print("up_rew: ",up_rew[0])
+    # print("right_hand_dist_rew: ", right_hand_dist_rew[0])
+    # print("left_hand_dist_rew: ",left_hand_dist_rew[0])
+    # print("up_rew: ",up_rew[0])
 
     resets = torch.where(right_hand_finger_dist >= 1.2, torch.ones_like(reset_buf), reset_buf)
     resets = torch.where(left_hand_finger_dist >= 1.2, torch.ones_like(resets), resets)

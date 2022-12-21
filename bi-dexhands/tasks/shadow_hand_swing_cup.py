@@ -129,7 +129,6 @@ class ShadowHandSwingCup(BaseTask):
         if not (self.obs_type in ["point_cloud", "full_state"]):
             raise Exception(
                 "Unknown type of observations!\nobservationType should be one of: [point_cloud, full_state]")
-
         print("Obs type:", self.obs_type)
 
         self.num_point_cloud_feature_dim = 768
