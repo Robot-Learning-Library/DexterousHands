@@ -18,6 +18,39 @@ from algorithms.rl.ppo import ActorCritic
 
 import copy
 
+def data_process(task_name, obs, act, obs_dim=24, act_dim=20):
+    # process observation
+    if task_name == 'ShadowHandOver':
+        right_hand_obs_idx = np.arange(24).tolist()
+        left_hand_obs_idx = np.arange(187, 211).tolist()
+    elif task_name == 'ShadowHand':
+        right_hand_obs_idx = np.arange(24).tolist()  # only right hand
+        left_hand_obs_idx = []
+    else:
+        right_hand_obs_idx = np.arange(24).tolist()
+        left_hand_obs_idx = np.arange(199, 223).tolist()
+    obs_idx = right_hand_obs_idx + left_hand_obs_idx
+    # prcess action
+    if task_name == 'ShadowHandOver':
+        right_hand_action_idx = np.arange(20).tolist()  # only care 20 joints on hand
+        left_hand_action_idx = np.arange(20, 40).tolist()
+    elif task_name == 'ShadowHand':
+        right_hand_action_idx = np.arange(20).tolist()  # only care 20 joints on hand
+        left_hand_action_idx = []
+    else:
+        right_hand_action_idx = np.arange(6, 26).tolist()  # only care 20 joints on hand
+        left_hand_action_idx = np.arange(32, 52).tolist()
+    action_idx = right_hand_action_idx + left_hand_action_idx
+    obs = obs[:, obs_idx]  # (episode_length, dim)
+    act = act[:, action_idx]
+    if obs.shape[1] ==  2*obs_dim and act.shape[1] == 2*act_dim:
+        obs = obs.view(-1, 2, obs_dim)
+        obs = obs.view(-1, obs_dim)
+        act = act.view(-1, 2, act_dim)
+        act = act.view(-1, act_dim)
+    # print(obs.shape, act.shape)
+    return obs, act
+
 class PPO:
     def __init__(self,
                  vec_env,
@@ -28,7 +61,10 @@ class PPO:
                  is_testing=False,
                  print_log=True,
                  apply_reset=False,
-                 asymmetric=False
+                 asymmetric=False,
+                 reward_model=True,
+                 frame_number=4,
+                 hf_scale=1.,
                  ):
 
         if not isinstance(vec_env.observation_space, Space):
@@ -51,6 +87,14 @@ class PPO:
         self.model_cfg = self.cfg_train["policy"]
         self.num_transitions_per_env=learn_cfg["nsteps"]
         self.learning_rate=learn_cfg["optim_stepsize"]
+        self.task_name = vec_env.task.__class__.__name__    
+        print('task name: ', self.task_name)
+        if reward_model:
+            self.reward_model = torch.jit.load('./reward_model/model.pt', map_location=self.device)
+            self.sample_deque = deque(maxlen=frame_number)
+            self.hf_scale = hf_scale
+        else:
+            self.reward_model = None
 
         # PPO components
         self.vec_env = vec_env
@@ -165,6 +209,7 @@ class PPO:
             for it in range(self.current_learning_iteration, num_learning_iterations):
                 start = time.time()
                 ep_infos = []
+                self.sample_deque.clear() if self.reward_model is not None else None
 
                 # Rollout
                 for _ in range(self.num_transitions_per_env):
@@ -178,6 +223,19 @@ class PPO:
                     # next_obs, rews, dones, infos = self.vec_env.step(self.demo_dict["actions"][id])
                     # id += 1
                     next_states = self.vec_env.get_state()
+                    if self.reward_model is not None:
+                        obs, act = data_process(self.task_name, current_obs, actions)
+                        oa = torch.cat((obs, act), dim=1)
+                        self.sample_deque.append(oa)
+                        if len(self.sample_deque) == self.sample_deque.maxlen:
+                            stack_sample = torch.cat(list(self.sample_deque), dim=1).to(self.device)
+                            human_preference_reward = self.reward_model(stack_sample).squeeze().detach()
+                        else:
+                            human_preference_reward = torch.zeros_like(rews)
+                        if human_preference_reward.shape != rews.shape: # sum rewards over left and right hands
+                            human_preference_reward = human_preference_reward.view(-1, 2)
+                            human_preference_reward = human_preference_reward.sum(dim=1)
+                        rews += self.hf_scale * human_preference_reward
 
                     # Record the transition
                     self.storage.add_transitions(current_obs, current_states, actions, rews, dones, values, actions_log_prob, mu, sigma)
