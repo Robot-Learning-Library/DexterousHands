@@ -128,7 +128,6 @@ class ShadowHandGraspAndPlace(BaseTask):
         if not (self.obs_type in ["point_cloud", "full_state"]):
             raise Exception(
                 "Unknown type of observations!\nobservationType should be one of: [point_cloud, full_state]")
-
         print("Obs type:", self.obs_type)
 
         self.num_point_cloud_feature_dim = 768
@@ -1449,12 +1448,12 @@ def compute_hand_reward(
     # rot_reward = rot_reward * bucket_up_reward * 5
     # reward = torch.exp(-0.1*(right_hand_dist_rew * dist_reward_scale)) + torch.exp(-0.1*(left_hand_dist_rew * dist_reward_scale))
     reward = right_hand_dist_rew + left_hand_dist_rew + rot_reward + up_rew + bucket_up_reward + grasp_rew
-    print("right_hand_dist_rew: ", right_hand_dist_rew[0])
-    print("left_hand_dist_rew: ", left_hand_dist_rew[0])
-    print("up_rew: ", up_rew[0])
-    print("rot_reward: ", rot_reward[0])
-    print("bucket_up_reward: ", bucket_up_reward[0])
-    print("grasp_rew: ", grasp_rew[0])
+    # print("right_hand_dist_rew: ", right_hand_dist_rew[0])
+    # print("left_hand_dist_rew: ", left_hand_dist_rew[0])
+    # print("up_rew: ", up_rew[0])
+    # print("rot_reward: ", rot_reward[0])
+    # print("bucket_up_reward: ", bucket_up_reward[0])
+    # print("grasp_rew: ", grasp_rew[0])
 
     # resets = torch.where(right_hand_dist_rew <= 0, torch.ones_like(reset_buf), reset_buf)
     resets = torch.where(right_hand_finger_dist >= 1.1, torch.ones_like(reset_buf), reset_buf)

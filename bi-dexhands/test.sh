@@ -1,7 +1,7 @@
 DATE=`date '+%Y%m%d_%H%M'`
 echo "Save as: " $DATE
 
-declare -a tasks=('ShadowHandKettle')
+declare -a tasks=('ShadowHandPushBlock')
 
 # declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandBlockStack' 'ShadowHandCatchUnderarm'
 # 'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap' 'ShadowHandLiftUnderarm' 'ShadowHandTwoCatchUnderarm'
@@ -23,7 +23,7 @@ declare -a tasks=('ShadowHandKettle')
 # mkdir -p log/$DATE
 
 declare -a checkpoints=('10000' '11000' '12000' '13000' '14000' '15000' '16000' '17000' '18000' '19000' '20000')
-declare -a seeds=('10' '11')
+declare -a seeds=('12')
 
 for i in ${!tasks[@]}; do
 	for j in ${!checkpoints[@]}; do

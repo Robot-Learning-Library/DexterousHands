@@ -18,6 +18,39 @@ from algorithms.rl.ppo import ActorCritic
 
 import copy
 
+def data_process(task_name, obs, act, obs_dim=24, act_dim=20):
+    # process observation
+    if task_name == 'ShadowHandOver':
+        right_hand_obs_idx = np.arange(24).tolist()
+        left_hand_obs_idx = np.arange(187, 211).tolist()
+    elif task_name == 'ShadowHand':
+        right_hand_obs_idx = np.arange(24).tolist()  # only right hand
+        left_hand_obs_idx = []
+    else:
+        right_hand_obs_idx = np.arange(24).tolist()
+        left_hand_obs_idx = np.arange(199, 223).tolist()
+    obs_idx = right_hand_obs_idx + left_hand_obs_idx
+    # prcess action
+    if task_name == 'ShadowHandOver':
+        right_hand_action_idx = np.arange(20).tolist()  # only care 20 joints on hand
+        left_hand_action_idx = np.arange(20, 40).tolist()
+    elif task_name == 'ShadowHand':
+        right_hand_action_idx = np.arange(20).tolist()  # only care 20 joints on hand
+        left_hand_action_idx = []
+    else:
+        right_hand_action_idx = np.arange(6, 26).tolist()  # only care 20 joints on hand
+        left_hand_action_idx = np.arange(32, 52).tolist()
+    action_idx = right_hand_action_idx + left_hand_action_idx
+    obs = obs[:, obs_idx]  # (episode_length, dim)
+    act = act[:, action_idx]
+    if obs.shape[1] ==  2*obs_dim and act.shape[1] == 2*act_dim:
+        obs = obs.view(-1, 2, obs_dim)
+        obs = obs.view(-1, obs_dim)
+        act = act.view(-1, 2, act_dim)
+        act = act.view(-1, act_dim)
+    # print(obs.shape, act.shape)
+    return obs, act
+
 class PPO:
     def __init__(self,
                  vec_env,
@@ -28,7 +61,10 @@ class PPO:
                  is_testing=False,
                  print_log=True,
                  apply_reset=False,
-                 asymmetric=False
+                 asymmetric=False,
+                 reward_model=True,
+                 frame_number=4,
+                 hf_scale=1.,
                  ):
 
         if not isinstance(vec_env.observation_space, Space):
@@ -51,6 +87,14 @@ class PPO:
         self.model_cfg = self.cfg_train["policy"]
         self.num_transitions_per_env=learn_cfg["nsteps"]
         self.learning_rate=learn_cfg["optim_stepsize"]
+        self.task_name = vec_env.task.__class__.__name__    
+        print('task name: ', self.task_name)
+        if reward_model:
+            self.reward_model = torch.jit.load(f'./reward_model/model_{frame_number}_gpu.pt', map_location=self.device)
+            self.sample_deque = deque(maxlen=frame_number)
+            self.hf_scale = hf_scale
+        else:
+            self.reward_model = None
 
         # PPO components
         self.vec_env = vec_env
@@ -59,24 +103,28 @@ class PPO:
         self.actor_critic.to(self.device)
 
         self.other_primitive_actor_critic_list = []
-        self.learned_model = learn_cfg["learned_seed"].split(",")
+        if len(learn_cfg["learned_seed"]) == 0:
+            self.learned_model = []
+        else:
+            self.learned_model = learn_cfg["learned_seed"].split(",")
         self.valid_primitive_list = len(self.learned_model)*[False]
         self.imitation_scale = 4
 
-        for i in range(len(self.learned_model)):
-            self.other_primitive_actor_critic_list.append(ActorCritic(self.observation_space.shape, self.state_space.shape, self.action_space.shape,
-                                                self.init_noise_std, self.model_cfg, asymmetric=asymmetric).to(self.device))
+        if len(self.learned_model) > 0:
+            for i in range(len(self.learned_model)):
+                self.other_primitive_actor_critic_list.append(ActorCritic(self.observation_space.shape, self.state_space.shape, self.action_space.shape,
+                                                    self.init_noise_std, self.model_cfg, asymmetric=asymmetric).to(self.device))
 
-        for i, actor_critic in enumerate(self.other_primitive_actor_critic_list):
-            path = log_dir.split("ppo")
-            try:
-                path = os.path.join(path[0]) + "/ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i])
-                actor_critic.load_state_dict(torch.load(path, map_location=self.device))
-                actor_critic.eval()
-                self.valid_primitive_list[i] = True
-            except:
-                print("No learned model found under path: /ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i]))
-                self.valid_primitive_list[i] = False
+            for i, actor_critic in enumerate(self.other_primitive_actor_critic_list):
+                path = log_dir.split("ppo")
+                try:
+                    path = os.path.join(path[0]) + "/ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i])
+                    actor_critic.load_state_dict(torch.load(path, map_location=self.device))
+                    actor_critic.eval()
+                    self.valid_primitive_list[i] = True
+                except:
+                    print("No learned model found under path: /ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i]))
+                    self.valid_primitive_list[i] = False
 
         self.storage = RolloutStorage(self.vec_env.num_envs, self.num_transitions_per_env, self.observation_space.shape,
                                       self.state_space.shape, self.action_space.shape, self.device, sampler)
@@ -128,6 +176,7 @@ class PPO:
                 dones = torch.tensor([0])
                 # for _ in range(self.num_transitions_per_env):
                 traj_info = {'obs': [], 'actions': [], 'rewards': [], 'dones': [], 'next_obs': []}
+                self.sample_deque.clear() if self.reward_model is not None else None
                 while not torch.all(dones):
                     with torch.no_grad():
                         if self.apply_reset:
@@ -136,6 +185,20 @@ class PPO:
                         actions, actions_log_prob, values, mu, sigma = self.actor_critic.act(current_obs, current_states)
                         # Step the vec_environment
                         next_obs, rews, dones, infos = self.vec_env.step(actions)
+                        if self.reward_model is not None:
+                            obs, act = data_process(self.task_name, current_obs, actions)
+                            oa = torch.cat((obs, act), dim=1)
+                            self.sample_deque.append(oa)
+                            if len(self.sample_deque) == self.sample_deque.maxlen:
+                                stack_sample = torch.cat(list(self.sample_deque), dim=1).to(self.device)
+                                human_preference_reward = self.reward_model(stack_sample).squeeze().detach()
+                            else:
+                                human_preference_reward = torch.zeros_like(rews)
+                            if human_preference_reward.shape != rews.shape: # sum rewards over left and right hands
+                                human_preference_reward = human_preference_reward.view(-1, 2)
+                                human_preference_reward = human_preference_reward.sum(dim=1)
+                            rews += self.hf_scale * human_preference_reward
+                            
                         current_obs.copy_(next_obs)
                         if self.record_traj:
                             traj_info['obs'].append(current_obs.cpu().numpy())
@@ -151,16 +214,20 @@ class PPO:
             
         else:
             rewbuffer = deque(maxlen=100)
+            hfrewbuffer = deque(maxlen=100)
             lenbuffer = deque(maxlen=100)
             cur_reward_sum = torch.zeros(self.vec_env.num_envs, dtype=torch.float, device=self.device)
+            cur_hf_reward_sum = torch.zeros(self.vec_env.num_envs, dtype=torch.float, device=self.device)
             cur_episode_length = torch.zeros(self.vec_env.num_envs, dtype=torch.float, device=self.device)
 
             reward_sum = []
+            hf_reward_sum = []
             episode_length = []
 
             for it in range(self.current_learning_iteration, num_learning_iterations):
                 start = time.time()
                 ep_infos = []
+                self.sample_deque.clear() if self.reward_model is not None else None
 
                 # Rollout
                 for _ in range(self.num_transitions_per_env):
@@ -174,6 +241,21 @@ class PPO:
                     # next_obs, rews, dones, infos = self.vec_env.step(self.demo_dict["actions"][id])
                     # id += 1
                     next_states = self.vec_env.get_state()
+                    if self.reward_model is not None:
+                        obs, act = data_process(self.task_name, current_obs, actions)
+                        oa = torch.cat((obs, act), dim=1)
+                        self.sample_deque.append(oa)
+                        if len(self.sample_deque) == self.sample_deque.maxlen:
+                            stack_sample = torch.cat(list(self.sample_deque), dim=1).to(self.device)
+                            human_preference_reward = self.reward_model(stack_sample).squeeze().detach()
+                        else:
+                            human_preference_reward = torch.zeros_like(rews)
+                        if human_preference_reward.shape != rews.shape: # sum rewards over left and right hands
+                            human_preference_reward = human_preference_reward.view(-1, 2)
+                            human_preference_reward = human_preference_reward.sum(dim=1)
+                        rews += self.hf_scale * human_preference_reward
+                    else:
+                        human_preference_reward = torch.zeros_like(rews)
 
                     # Record the transition
                     self.storage.add_transitions(current_obs, current_states, actions, rews, dones, values, actions_log_prob, mu, sigma)
@@ -184,18 +266,22 @@ class PPO:
 
                     if self.print_log:
                         cur_reward_sum[:] += rews
+                        cur_hf_reward_sum[:] += human_preference_reward
                         cur_episode_length[:] += 1
 
                         new_ids = (dones > 0).nonzero(as_tuple=False)
                         reward_sum.extend(cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
+                        hf_reward_sum.extend(cur_hf_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
                         episode_length.extend(cur_episode_length[new_ids][:, 0].cpu().numpy().tolist())
                         cur_reward_sum[new_ids] = 0
+                        cur_hf_reward_sum[new_ids] = 0
                         cur_episode_length[new_ids] = 0
 
                 if self.print_log:
                     # reward_sum = [x[0] for x in reward_sum]
                     # episode_length = [x[0] for x in episode_length]
                     rewbuffer.extend(reward_sum)
+                    hfrewbuffer.extend(hf_reward_sum)
                     lenbuffer.extend(episode_length)
 
                 _, _, last_values, _, _ = self.actor_critic.act(current_obs, current_states)
@@ -240,6 +326,7 @@ class PPO:
         self.writer.add_scalar('Policy/mean_noise_std', mean_std.item(), locs['it'])
         if len(locs['rewbuffer']) > 0:
             self.writer.add_scalar('Train/mean_reward', statistics.mean(locs['rewbuffer']), locs['it'])
+            self.writer.add_scalar('Train/human_feedback_reward', statistics.mean(locs['hfrewbuffer']), locs['it'])
             self.writer.add_scalar('Train/mean_episode_length', statistics.mean(locs['lenbuffer']), locs['it'])
             self.writer.add_scalar('Train/mean_reward/time', statistics.mean(locs['rewbuffer']), self.tot_time)
             self.writer.add_scalar('Train/mean_episode_length/time', statistics.mean(locs['lenbuffer']), self.tot_time)
@@ -261,6 +348,7 @@ class PPO:
                           f"""{'Imitation loss:':>{pad}} {locs['mean_imitation_loss']:.4f}\n"""
                           f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
                           f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.2f}\n"""
+                          f"""{'Mean human preference reward:':>{pad}} {statistics.mean(locs['hfrewbuffer']):.2f}\n"""
                           f"""{'Mean episode length:':>{pad}} {statistics.mean(locs['lenbuffer']):.2f}\n"""
                           f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
                           f"""{'Mean episode length/episode:':>{pad}} {locs['mean_trajectory_length']:.2f}\n""")
@@ -313,7 +401,7 @@ class PPO:
                                                                                                                        actions_batch)
 
                 # Imitation loss
-                imitation_loss = 0
+                imitation_loss = torch.tensor(0)
                 for i, (other_actor_critic, valid) in enumerate(zip(self.other_primitive_actor_critic_list, self.valid_primitive_list)):
                     if valid:
                         other_actor_critic_actions, _, _, _, _ = other_actor_critic.act(obs_batch, states_batch)
@@ -323,7 +411,8 @@ class PPO:
                                                                                                         other_actor_critic_actions)
 
                         imitation_loss += (- 1 / (1 + (other_actor_critic_actions_log_prob_batch).mean()))
-                imitation_loss = imitation_loss / (sum(self.valid_primitive_list)) * self.imitation_scale
+                if len(self.valid_primitive_list) > 0:  
+                    imitation_loss = imitation_loss / (sum(self.valid_primitive_list)) * self.imitation_scale
 
                 # KL
                 if self.desired_kl != None and self.schedule == 'adaptive':
