@@ -64,7 +64,8 @@ class PPO:
                  asymmetric=False,
                  reward_model=True,
                  frame_number=4,
-                 hf_scale=1.,
+                 hf_scale=0.2,
+                 adaptive_hf_scale=True # adapt the scale of the human feedback reward according to the task reward
                  ):
 
         if not isinstance(vec_env.observation_space, Space):
@@ -93,6 +94,7 @@ class PPO:
             self.reward_model = torch.jit.load(f'./reward_model/model_{frame_number}_gpu.pt', map_location=self.device)
             self.sample_deque = deque(maxlen=frame_number)
             self.hf_scale = hf_scale
+            self.adaptive_hf_scale = adaptive_hf_scale
         else:
             self.reward_model = None
 
@@ -170,6 +172,7 @@ class PPO:
     def run(self, num_learning_iterations, log_interval=1):
         current_obs = self.vec_env.reset()
         current_states = self.vec_env.get_state()
+        smooth_task_reward = 0.
 
         if self.is_testing:
             for it in range(num_learning_iterations):
@@ -197,7 +200,12 @@ class PPO:
                             if human_preference_reward.shape != rews.shape: # sum rewards over left and right hands
                                 human_preference_reward = human_preference_reward.view(-1, 2)
                                 human_preference_reward = human_preference_reward.sum(dim=1)
-                            rews += self.hf_scale * human_preference_reward
+                            if self.adaptive_hf_scale:
+                                smooth_task_reward = 0.9 * smooth_task_reward + 0.1 * rews.mean()
+                                adap_coeff = self.hf_scale * torch.abs(smooth_task_reward)
+                            else:
+                                adap_coeff = self.hf_scale
+                            rews += adap_coeff * human_preference_reward
                             
                         current_obs.copy_(next_obs)
                         if self.record_traj:
@@ -215,6 +223,7 @@ class PPO:
         else:
             rewbuffer = deque(maxlen=100)
             hfrewbuffer = deque(maxlen=100)
+            coefbuffer = deque(maxlen=100)
             lenbuffer = deque(maxlen=100)
             cur_reward_sum = torch.zeros(self.vec_env.num_envs, dtype=torch.float, device=self.device)
             cur_hf_reward_sum = torch.zeros(self.vec_env.num_envs, dtype=torch.float, device=self.device)
@@ -223,6 +232,7 @@ class PPO:
             reward_sum = []
             hf_reward_sum = []
             episode_length = []
+            smooth_task_reward = 0.
 
             for it in range(self.current_learning_iteration, num_learning_iterations):
                 start = time.time()
@@ -253,7 +263,12 @@ class PPO:
                         if human_preference_reward.shape != rews.shape: # sum rewards over left and right hands
                             human_preference_reward = human_preference_reward.view(-1, 2)
                             human_preference_reward = human_preference_reward.sum(dim=1)
-                        rews += self.hf_scale * human_preference_reward
+                        if self.adaptive_hf_scale:
+                            smooth_task_reward = 0.9 * smooth_task_reward + 0.1 * rews.mean()
+                            adap_coeff = self.hf_scale * torch.abs(smooth_task_reward)
+                        else:
+                            adap_coeff = self.hf_scale
+                        rews += adap_coeff * human_preference_reward
                     else:
                         human_preference_reward = torch.zeros_like(rews)
 
@@ -282,6 +297,7 @@ class PPO:
                     # episode_length = [x[0] for x in episode_length]
                     rewbuffer.extend(reward_sum)
                     hfrewbuffer.extend(hf_reward_sum)
+                    coefbuffer.extend([adap_coeff])
                     lenbuffer.extend(episode_length)
 
                 _, _, last_values, _, _ = self.actor_critic.act(current_obs, current_states)
@@ -327,6 +343,7 @@ class PPO:
         if len(locs['rewbuffer']) > 0:
             self.writer.add_scalar('Train/mean_reward', statistics.mean(locs['rewbuffer']), locs['it'])
             self.writer.add_scalar('Train/human_feedback_reward', statistics.mean(locs['hfrewbuffer']), locs['it'])
+            self.writer.add_scalar('Train/adaptive_coefficient', statistics.mean(locs['coefbuffer']), locs['it'])
             self.writer.add_scalar('Train/mean_episode_length', statistics.mean(locs['lenbuffer']), locs['it'])
             self.writer.add_scalar('Train/mean_reward/time', statistics.mean(locs['rewbuffer']), self.tot_time)
             self.writer.add_scalar('Train/mean_episode_length/time', statistics.mean(locs['lenbuffer']), self.tot_time)
