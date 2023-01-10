@@ -1,14 +1,14 @@
 DATE=`date '+%Y%m%d_%H%M'`
 echo "Save as: " $DATE
 
-declare -a tasks=('ShadowHandPushBlock')
+# declare -a tasks=('ShadowHandPushBlock')
 
-# declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandBlockStack' 'ShadowHandCatchUnderarm'
-# 'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap' 'ShadowHandLiftUnderarm' 'ShadowHandTwoCatchUnderarm'
-# 'ShadowHandDoorOpenInward' 'ShadowHandDoorOpenOutward' 'ShadowHandDoorCloseInward' 'ShadowHandDoorCloseOutward'
-# 'ShadowHandPushBlock' 'ShadowHandKettle' 'ShadowHandReOrientation'
-# 'ShadowHandScissors' 'ShadowHandPen' 'ShadowHandSwingCup' 'ShadowHandBottleCap' 'ShadowHandGraspAndPlace' 'ShadowHandSwitch'
-# )
+declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandBlockStack' 'ShadowHandCatchUnderarm'
+'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap' 'ShadowHandLiftUnderarm' 'ShadowHandTwoCatchUnderarm'
+'ShadowHandDoorOpenInward' 'ShadowHandDoorOpenOutward' 'ShadowHandDoorCloseInward' 'ShadowHandDoorCloseOutward'
+'ShadowHandPushBlock' 'ShadowHandKettle' 'ShadowHandReOrientation'
+'ShadowHandScissors' 'ShadowHandPen' 'ShadowHandSwingCup' 'ShadowHandBottleCap' 'ShadowHandGraspAndPlace' 'ShadowHandSwitch'
+)
 
 # declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandBlockStack' 'ShadowHandCatchUnderarm'
 # 'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap' 'ShadowHandLiftUnderarm' 'ShadowHandTwoCatchUnderarm'
@@ -22,8 +22,10 @@ declare -a tasks=('ShadowHandPushBlock')
 # )
 # mkdir -p log/$DATE
 
-declare -a checkpoints=('10000' '11000' '12000' '13000' '14000' '15000' '16000' '17000' '18000' '19000' '20000')
-declare -a seeds=('12')
+# declare -a checkpoints=('10000' '11000' '12000' '13000' '14000' '15000' '16000' '17000' '18000' '19000' '20000')
+# declare -a seeds=('12')
+declare -a checkpoints=('20000')
+declare -a seeds=('20')
 
 for i in ${!tasks[@]}; do
 	for j in ${!checkpoints[@]}; do
