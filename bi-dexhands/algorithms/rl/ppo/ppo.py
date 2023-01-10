@@ -164,6 +164,7 @@ class PPO:
     def load(self, path):
         self.actor_critic.load_state_dict(torch.load(path, map_location=self.device))
         self.current_learning_iteration = int(path.split("_")[-1].split(".")[0])
+        self.current_learning_iteration = 0  # as start
         self.actor_critic.train()
 
     def save(self, path):
@@ -297,7 +298,7 @@ class PPO:
                     # episode_length = [x[0] for x in episode_length]
                     rewbuffer.extend(reward_sum)
                     hfrewbuffer.extend(hf_reward_sum)
-                    coefbuffer.extend([adap_coeff])
+                    coefbuffer.extend([adap_coeff.cpu().numpy().tolist()])
                     lenbuffer.extend(episode_length)
 
                 _, _, last_values, _, _ = self.actor_critic.act(current_obs, current_states)
