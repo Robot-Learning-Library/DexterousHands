@@ -273,6 +273,7 @@ class PPO:
                             adap_coeff = self.hf_scale
                         rews += adap_coeff * human_preference_reward
                     else:
+                        adap_coeff = torch.tensor(1.)
                         human_preference_reward = torch.zeros_like(rews)
 
                     # Record the transition
