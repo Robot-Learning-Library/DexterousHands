@@ -419,7 +419,7 @@ class PPO:
                                                                                                                        actions_batch)
 
                 # Imitation loss
-                imitation_loss = torch.tensor(0)
+                imitation_loss = torch.tensor(0.).to(self.device)
                 for i, (other_actor_critic, valid) in enumerate(zip(self.other_primitive_actor_critic_list, self.valid_primitive_list)):
                     if valid:
                         other_actor_critic_actions, _, _, _, _ = other_actor_critic.act(obs_batch, states_batch)

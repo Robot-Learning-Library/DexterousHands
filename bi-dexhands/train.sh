@@ -24,5 +24,5 @@ for i in ${!tasks[@]}; do
 	# train from scratch
 	# nohup python train.py --task=${tasks[$i]} --seed=20 --rl_device=cuda:$((2 + i % 6)) --sim_device=cuda:$((2 + i % 6)) --graphics_device_id=$((2 + i % 6)) --algo=ppo --learned_seed=3,4,10,11 --headless --record_video=True --record_video_interval=30 --wandb_activate=True --wandb_entity=quantumiracle >> log/$DATE/${tasks[$i]}.log &
 	# fine-tune
-	nohup python train.py --task=${tasks[$i]} --seed=20 --model_dir=./logs/${tasks[$i]}/ppo/ppo_seed${12}/model_${20000}.pt --rl_device=cuda:$((2 + i % 6)) --sim_device=cuda:$((2 + i % 6)) --graphics_device_id=$((2 + i % 6)) --algo=ppo --learned_seed=3,4,10,11 --headless --record_video=True --record_video_interval=30 --wandb_activate=True --wandb_entity=quantumiracle >> log/$DATE/${tasks[$i]}.log &	
+	nohup python train.py --task=${tasks[$i]} --seed=20 --model_dir=./logs/${tasks[$i]}/ppo/ppo_seed${12}/model_${20000}.pt --rl_device=cuda:$((2 + i % 6)) --sim_device=cuda:$((2 + i % 6)) --graphics_device_id=$((2 + i % 6)) --algo=ppo --learned_seed=3,4,10,11 --headless --wandb_activate=True --wandb_entity=quantumiracle >> log/$DATE/${tasks[$i]}.log &	
 done
