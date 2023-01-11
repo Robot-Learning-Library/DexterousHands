@@ -50,6 +50,6 @@ def process_sarl(args, env, cfg_train, logdir):
         model.test(chkpt_path)
     elif args.model_dir != "":
         print("Loading model from {}".format(chkpt_path))
-        model.load(chkpt_path)
+        model.load(chkpt_path, current_learning_iteration=0)  # to still learn the desired iterations
 
     return model

@@ -161,10 +161,12 @@ class PPO:
         self.actor_critic.load_state_dict(torch.load(path, map_location=self.device))
         self.actor_critic.eval()
 
-    def load(self, path):
+    def load(self, path, current_learning_iteration=None):
         self.actor_critic.load_state_dict(torch.load(path, map_location=self.device))
-        self.current_learning_iteration = int(path.split("_")[-1].split(".")[0])
-        self.current_learning_iteration = 0  # as start
+        if current_learning_iteration is None:
+            self.current_learning_iteration = int(path.split("_")[-1].split(".")[0])
+        else:
+            self.current_learning_iteration = current_learning_iteration  # as specified
         self.actor_critic.train()
 
     def save(self, path):
