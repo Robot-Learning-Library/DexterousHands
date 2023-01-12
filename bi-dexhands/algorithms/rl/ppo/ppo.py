@@ -62,7 +62,9 @@ class PPO:
                  print_log=True,
                  apply_reset=False,
                  asymmetric=False,
-                 reward_model=True,
+                 reward_model=True,   # whether to use human feedback reward
+                 hf_reward_only=False,  # if only using human feedback reward for finetuning
+                 policy_kl_reg=False, # if using policy KL constraint; usually policy_kl_reg and hf_reward_only are set the same
                  frame_number=4,
                  hf_scale=0.2,
                  adaptive_hf_scale=True # adapt the scale of the human feedback reward according to the task reward
@@ -94,6 +96,9 @@ class PPO:
             self.reward_model = torch.jit.load(f'./reward_model/model_{frame_number}_gpu.pt', map_location=self.device)
             self.sample_deque = deque(maxlen=frame_number)
             self.hf_scale = hf_scale
+            self.hf_reward_only = hf_reward_only
+            self.policy_kl_reg = policy_kl_reg
+            self.policy_kl_reg_coef = 1.
             self.adaptive_hf_scale = adaptive_hf_scale
         else:
             self.reward_model = None
@@ -156,6 +161,8 @@ class PPO:
         self.record_traj_path = self.cfg_train["record_traj_path"]
 
         self.apply_reset = apply_reset
+        
+        self.loaded_actor_critic = None
 
     def test(self, path):
         self.actor_critic.load_state_dict(torch.load(path, map_location=self.device))
@@ -167,6 +174,8 @@ class PPO:
             self.current_learning_iteration = int(path.split("_")[-1].split(".")[0])
         else:
             self.current_learning_iteration = current_learning_iteration  # as specified
+        self.loaded_actor_critic = copy.deepcopy(self.actor_critic)
+
         self.actor_critic.train()
 
     def save(self, path):
@@ -208,7 +217,10 @@ class PPO:
                                 adap_coeff = self.hf_scale * torch.abs(smooth_task_reward)
                             else:
                                 adap_coeff = self.hf_scale
-                            rews += adap_coeff * human_preference_reward
+                            if self.hf_reward_only:
+                                rews = human_preference_reward
+                            else:
+                                rews += adap_coeff * human_preference_reward
                             
                         current_obs.copy_(next_obs)
                         if self.record_traj:
@@ -241,7 +253,6 @@ class PPO:
                 start = time.time()
                 ep_infos = []
                 self.sample_deque.clear() if self.reward_model is not None else None
-
                 # Rollout
                 for _ in range(self.num_transitions_per_env):
                     if self.apply_reset:
@@ -260,7 +271,7 @@ class PPO:
                         self.sample_deque.append(oa)
                         if len(self.sample_deque) == self.sample_deque.maxlen:
                             stack_sample = torch.cat(list(self.sample_deque), dim=1).to(self.device)
-                            human_preference_reward = self.reward_model(stack_sample).squeeze().detach()
+                            human_preference_reward = self.reward_model(stack_sample).squeeze(dim=-1).detach()
                         else:
                             human_preference_reward = torch.zeros_like(rews)
                         if human_preference_reward.shape != rews.shape: # sum rewards over left and right hands
@@ -271,8 +282,12 @@ class PPO:
                             adap_coeff = self.hf_scale * torch.abs(smooth_task_reward)
                         else:
                             adap_coeff = self.hf_scale
-                        rews += adap_coeff * human_preference_reward
+                        if self.hf_reward_only:
+                            rews = human_preference_reward
+                        else:
+                            rews += adap_coeff * human_preference_reward
                     else:
+                        adap_coeff = torch.tensor(1.)
                         human_preference_reward = torch.zeros_like(rews)
 
                     # Record the transition
@@ -286,7 +301,6 @@ class PPO:
                         cur_reward_sum[:] += rews
                         cur_hf_reward_sum[:] += human_preference_reward
                         cur_episode_length[:] += 1
-
                         new_ids = (dones > 0).nonzero(as_tuple=False)
                         reward_sum.extend(cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
                         hf_reward_sum.extend(cur_hf_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
@@ -434,6 +448,16 @@ class PPO:
                 if len(self.valid_primitive_list) > 0:  
                     imitation_loss = imitation_loss / (sum(self.valid_primitive_list)) * self.imitation_scale
 
+
+                # Policy constraint KL
+                if self.policy_kl_reg and self.loaded_actor_critic is not None:
+                    loaded_actor_critic_actions_log_prob_batch, _, _, _, _ = self.loaded_actor_critic.evaluate(obs_batch,
+                                                                                                    states_batch,
+                                                                                                    actions_batch)
+
+                    log_ratio = actions_log_prob_batch - torch.squeeze(loaded_actor_critic_actions_log_prob_batch)
+                    policy_kl_reg_loss = log_ratio.mean()
+
                 # KL
                 if self.desired_kl != None and self.schedule == 'adaptive':
 
@@ -467,6 +491,8 @@ class PPO:
                     value_loss = (returns_batch - value_batch).pow(2).mean()
 
                 loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + imitation_loss
+                if self.policy_kl_reg:
+                    loss += self.policy_kl_reg_coef * policy_kl_reg_loss
 
                 # Gradient step
                 self.optimizer.zero_grad()

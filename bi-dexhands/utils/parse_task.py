@@ -84,6 +84,7 @@ def parse_task(args, cfg, cfg_train, sim_params, agent_index):
     elif args.task_type == "Python":
         print("Python")
         cfg["record_video"] = args.record_video
+        cfg_train['learn']["test"] = args.test
         cfg["test"] = args.test
         try:
             task = eval(args.task)(
