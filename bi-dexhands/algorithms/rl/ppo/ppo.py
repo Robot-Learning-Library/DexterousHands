@@ -108,6 +108,7 @@ class PPO:
         self.actor_critic = ActorCritic(self.observation_space.shape, self.state_space.shape, self.action_space.shape,
                                                self.init_noise_std, self.model_cfg, asymmetric=asymmetric)
         self.actor_critic.to(self.device)
+        print('device: ', self.device)
 
         self.other_primitive_actor_critic_list = []
         if len(learn_cfg["learned_seed"]) == 0:
@@ -271,7 +272,7 @@ class PPO:
                         self.sample_deque.append(oa)
                         if len(self.sample_deque) == self.sample_deque.maxlen:
                             stack_sample = torch.cat(list(self.sample_deque), dim=1).to(self.device)
-                            human_preference_reward = self.reward_model(stack_sample).squeeze().detach()
+                            human_preference_reward = self.reward_model(stack_sample).squeeze(dim=-1).detach()
                         else:
                             human_preference_reward = torch.zeros_like(rews)
                         if human_preference_reward.shape != rews.shape: # sum rewards over left and right hands
@@ -301,7 +302,6 @@ class PPO:
                         cur_reward_sum[:] += rews
                         cur_hf_reward_sum[:] += human_preference_reward
                         cur_episode_length[:] += 1
-
                         new_ids = (dones > 0).nonzero(as_tuple=False)
                         reward_sum.extend(cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
                         hf_reward_sum.extend(cur_hf_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
@@ -456,8 +456,8 @@ class PPO:
                                                                                                     states_batch,
                                                                                                     actions_batch)
 
-                log_ratio = actions_log_prob_batch - torch.squeeze(loaded_actor_critic_actions_log_prob_batch)
-                policy_kl_reg_loss = log_ratio.mean()
+                    log_ratio = actions_log_prob_batch - torch.squeeze(loaded_actor_critic_actions_log_prob_batch)
+                    policy_kl_reg_loss = log_ratio.mean()
 
                 # KL
                 if self.desired_kl != None and self.schedule == 'adaptive':
