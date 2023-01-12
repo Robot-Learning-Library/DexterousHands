@@ -90,7 +90,9 @@ class PPO:
         self.model_cfg = self.cfg_train["policy"]
         self.num_transitions_per_env=learn_cfg["nsteps"]
         self.learning_rate=learn_cfg["optim_stepsize"]
-        self.task_name = vec_env.task.__class__.__name__    
+        self.task_name = vec_env.task.__class__.__name__  
+        if self.task_name == 'RecordVideo':  # in testing, there is an additional wrapper
+            self.task_name = vec_env.task.env.__class__.__name__
         print('task name: ', self.task_name)
         if reward_model:
             self.reward_model = torch.jit.load(f'./reward_model/model_{frame_number}_gpu.pt', map_location=self.device)
@@ -206,7 +208,7 @@ class PPO:
                             self.sample_deque.append(oa)
                             if len(self.sample_deque) == self.sample_deque.maxlen:
                                 stack_sample = torch.cat(list(self.sample_deque), dim=1).to(self.device)
-                                human_preference_reward = self.reward_model(stack_sample).squeeze().detach()
+                                human_preference_reward = self.reward_model(stack_sample).squeeze(dim=-1).detach()
                             else:
                                 human_preference_reward = torch.zeros_like(rews)
                             if human_preference_reward.shape != rews.shape: # sum rewards over left and right hands
