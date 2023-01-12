@@ -63,8 +63,8 @@ class PPO:
                  apply_reset=False,
                  asymmetric=False,
                  reward_model=True,   # whether to use human feedback reward
-                 hf_reward_only=False,  # if only using human feedback reward for finetuning
-                 policy_kl_reg=False, # if using policy KL constraint; usually policy_kl_reg and hf_reward_only are set the same
+                 hf_reward_only=True,  # if only using human feedback reward for finetuning
+                 policy_kl_reg=True, # if using policy KL constraint; usually policy_kl_reg and hf_reward_only are set the same
                  frame_number=4,
                  hf_scale=0.2,
                  adaptive_hf_scale=True # adapt the scale of the human feedback reward according to the task reward

@@ -37,7 +37,6 @@ def train():
 
     elif args.algo in ["ppo","ddpg","sac","td3","trpo","dppo"]:
         task, env = parse_task(args, cfg, cfg_train, sim_params, agent_index)
-        print(cfg_train)
 
         sarl = eval('process_sarl')(args, env, cfg_train, logdir)
 
