@@ -108,7 +108,6 @@ class PPO:
         self.actor_critic = ActorCritic(self.observation_space.shape, self.state_space.shape, self.action_space.shape,
                                                self.init_noise_std, self.model_cfg, asymmetric=asymmetric)
         self.actor_critic.to(self.device)
-        print('device: ', self.device)
 
         self.other_primitive_actor_critic_list = []
         if len(learn_cfg["learned_seed"]) == 0:
