@@ -15,41 +15,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 from algorithms.rl.ppo import RolloutStorage
 from algorithms.rl.ppo import ActorCritic
-
+from utils.data_processs import data_process_per_sample
 import copy
-
-def data_process(task_name, obs, act, obs_dim=24, act_dim=20):
-    # process observation
-    if task_name == 'ShadowHandOver':
-        right_hand_obs_idx = np.arange(24).tolist()
-        left_hand_obs_idx = np.arange(187, 211).tolist()
-    elif task_name == 'ShadowHand':
-        right_hand_obs_idx = np.arange(24).tolist()  # only right hand
-        left_hand_obs_idx = []
-    else:
-        right_hand_obs_idx = np.arange(24).tolist()
-        left_hand_obs_idx = np.arange(199, 223).tolist()
-    obs_idx = right_hand_obs_idx + left_hand_obs_idx
-    # prcess action
-    if task_name == 'ShadowHandOver':
-        right_hand_action_idx = np.arange(20).tolist()  # only care 20 joints on hand
-        left_hand_action_idx = np.arange(20, 40).tolist()
-    elif task_name == 'ShadowHand':
-        right_hand_action_idx = np.arange(20).tolist()  # only care 20 joints on hand
-        left_hand_action_idx = []
-    else:
-        right_hand_action_idx = np.arange(6, 26).tolist()  # only care 20 joints on hand
-        left_hand_action_idx = np.arange(32, 52).tolist()
-    action_idx = right_hand_action_idx + left_hand_action_idx
-    obs = obs[:, obs_idx]  # (episode_length, dim)
-    act = act[:, action_idx]
-    if obs.shape[1] ==  2*obs_dim and act.shape[1] == 2*act_dim:
-        obs = obs.view(-1, 2, obs_dim)
-        obs = obs.view(-1, obs_dim)
-        act = act.view(-1, 2, act_dim)
-        act = act.view(-1, act_dim)
-    # print(obs.shape, act.shape)
-    return obs, act
 
 class PPO:
     def __init__(self,
@@ -203,7 +170,7 @@ class PPO:
                         # Step the vec_environment
                         next_obs, rews, dones, infos = self.vec_env.step(actions)
                         if self.reward_model is not None:
-                            obs, act = data_process(self.task_name, current_obs, actions)
+                            obs, act = data_process_per_sample(self.task_name, current_obs, actions)
                             oa = torch.cat((obs, act), dim=1)
                             self.sample_deque.append(oa)
                             if len(self.sample_deque) == self.sample_deque.maxlen:
@@ -268,7 +235,7 @@ class PPO:
                     # id += 1
                     next_states = self.vec_env.get_state()
                     if self.reward_model is not None:
-                        obs, act = data_process(self.task_name, current_obs, actions)
+                        obs, act = data_process_per_sample(self.task_name, current_obs, actions)
                         oa = torch.cat((obs, act), dim=1)
                         self.sample_deque.append(oa)
                         if len(self.sample_deque) == self.sample_deque.maxlen:
