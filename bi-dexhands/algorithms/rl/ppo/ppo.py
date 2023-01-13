@@ -259,6 +259,11 @@ class PPO:
                         adap_coeff = torch.tensor(1.)
                         human_preference_reward = torch.zeros_like(rews)
 
+                    # add action penalty to solve the shaking
+                    action_penalty = torch.sum(torch.clamp(actions, -1, 1) ** 2, dim=-1)
+                    rews -= 0.002 * action_penalty * rews
+                    infos["action_penalty"] = 0.002 * action_penalty * rews
+
                     # Record the transition
                     self.storage.add_transitions(current_obs, current_states, actions, rews, dones, values, actions_log_prob, mu, sigma)
                     current_obs.copy_(next_obs)
