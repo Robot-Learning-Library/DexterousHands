@@ -67,7 +67,7 @@ class PPO:
             self.hf_scale = hf_scale
             self.hf_reward_only = hf_reward_only
             self.policy_kl_reg = policy_kl_reg
-            self.policy_kl_reg_coef = 1.
+            self.policy_kl_reg_coef = 20.
             self.adaptive_hf_scale = adaptive_hf_scale
         else:
             self.reward_model = None
