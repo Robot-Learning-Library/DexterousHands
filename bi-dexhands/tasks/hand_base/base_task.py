@@ -10,7 +10,7 @@ import os
 import operator
 from copy import deepcopy
 import random
-import pyautogui
+# import pyautogui
 from isaacgym import gymapi
 from isaacgym.gymutil import get_property_setter_map, get_property_getter_map, get_default_setter_args, apply_random_samples, check_buckets, generate_random_samples
 
@@ -125,7 +125,8 @@ class BaseTask():
 
             self.gym.viewer_camera_look_at(
                 self.viewer, None, cam_pos, cam_target)
-        pyautogui.press("tab")  # tab will remove the toolbar on the left side of the screen
+        if cfg["record_video"]:
+            pyautogui.press("tab")  # tab will remove the toolbar on the left side of the screen
 
     # set gravity based on up axis and return axis index
     def set_sim_params_up_axis(self, sim_params, axis):
