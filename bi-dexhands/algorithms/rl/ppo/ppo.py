@@ -15,7 +15,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from algorithms.rl.ppo import RolloutStorage
 from algorithms.rl.ppo import ActorCritic
-from utils.data_processs import data_process_per_sample
+from utils.data_process import data_process_per_sample
 import copy
 
 class PPO:
