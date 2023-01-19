@@ -42,7 +42,7 @@ declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'Shado
 
 declare -a checkpoints=('1000' '2000' '3000' '4000' '5000')
 # declare -a checkpoints=('5000')
-declare -a seeds=('21' '22')
+declare -a seeds=('22' '24')
 
 
 for i in ${!tasks[@]}; do
