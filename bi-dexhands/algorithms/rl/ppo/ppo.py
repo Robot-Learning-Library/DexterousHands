@@ -94,12 +94,12 @@ class PPO:
             for i, actor_critic in enumerate(self.other_primitive_actor_critic_list):
                 path = log_dir.split("ppo")
                 try:
-                    path = os.path.join(path[0]) + "/ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i])
+                    path = os.path.join(path[0]) + "/ppo/ppo_seed{}/model_5000.pt".format(self.learned_model[i])
                     actor_critic.load_state_dict(torch.load(path, map_location=self.device))
                     actor_critic.eval()
                     self.valid_primitive_list[i] = True
                 except:
-                    print("No learned model found under path: /ppo/ppo_seed{}/model_20000.pt".format(self.learned_model[i]))
+                    print("No learned model found under path: /ppo/ppo_seed{}/model_5000.pt".format(self.learned_model[i]))
                     self.valid_primitive_list[i] = False
 
         self.storage = RolloutStorage(self.vec_env.num_envs, self.num_transitions_per_env, self.observation_space.shape,
