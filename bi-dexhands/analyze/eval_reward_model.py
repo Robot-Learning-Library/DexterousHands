@@ -4,6 +4,8 @@ import pickle
 import matplotlib.pyplot as plt
 import torch
 import os
+import sys
+sys.path.append('..')
 
 from utils.data_process import data_process
 

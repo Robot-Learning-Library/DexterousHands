@@ -411,7 +411,7 @@ class ShadowHandCatchUnderarm(BaseTask):
         object_start_pose.p.z = shadow_hand_start_pose.p.z + pose_dz
 
         if self.object_type == "pen":
-            object_start_pose.p.z = shadow_hand_start_pose.p.z + 0.02
+            object_start_pose.p.z = shadow_hand_start_pose.p.z + 0.05
 
         self.goal_displacement = gymapi.Vec3(-0., 0.0, 0.)
         self.goal_displacement_tensor = to_torch(
