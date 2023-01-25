@@ -29,7 +29,7 @@ class PPO:
                  print_log=True,
                  apply_reset=False,
                  asymmetric=False,
-                 reward_model=True,   # whether to use human feedback reward
+                 reward_model=False,   # whether to use human feedback reward
                  hf_reward_only=False,  # if only using human feedback reward for finetuning
                  policy_kl_reg=False, # if using policy KL constraint; usually policy_kl_reg and hf_reward_only are set the same
                  frame_number=8,
@@ -70,6 +70,7 @@ class PPO:
             self.policy_kl_reg_coef = 20.
             self.adaptive_hf_scale = adaptive_hf_scale
         else:
+            self.policy_kl_reg = policy_kl_reg
             self.reward_model = None
 
         # PPO components
@@ -185,7 +186,7 @@ class PPO:
                                 smooth_task_reward = 0.9 * smooth_task_reward + 0.1 * rews.mean()
                                 adap_coeff = self.hf_scale * torch.abs(smooth_task_reward)
                             else:
-                                adap_coeff = self.hf_scale
+                                adap_coeff = torch.tensor(self.hf_scale)
                             if self.hf_reward_only:
                                 rews = human_preference_reward
                             else:
@@ -250,7 +251,7 @@ class PPO:
                             smooth_task_reward = 0.9 * smooth_task_reward + 0.1 * rews.mean()
                             adap_coeff = self.hf_scale * torch.abs(smooth_task_reward)
                         else:
-                            adap_coeff = self.hf_scale
+                            adap_coeff = torch.tensor(self.hf_scale)
                         if self.hf_reward_only:
                             rews = human_preference_reward
                         else:

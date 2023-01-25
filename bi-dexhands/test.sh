@@ -40,9 +40,12 @@ declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'Shado
 # declare -a tasks=('ShadowHand' 'ShadowHandDoorCloseInward' 'ShadowHandPushBlock')
 
 
-declare -a checkpoints=('1000' '2000' '3000' '4000' '5000')
+# declare -a checkpoints=('1000' '2000' '3000' '4000' '5000')
+declare -a checkpoints=('6000' '7000' '8000' '9000' '10000')
+
 # declare -a checkpoints=('5000')
-declare -a seeds=('30' '31' '32' '33' '34')
+# declare -a seeds=('100' '101' '102' '103')
+declare -a seeds=('40' '41' '42' '43' '44')
 
 
 for i in ${!tasks[@]}; do

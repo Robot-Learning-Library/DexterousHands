@@ -878,8 +878,8 @@ def compute_hand_reward(
     # Check env termination conditions, including maximum success number
     resets = torch.where(object_pos[:, 2] <= 0.2, torch.ones_like(reset_buf), reset_buf)
     resets = torch.where(object_another_pos[:, 2] <= 0.2, torch.ones_like(resets), resets)
-    right_hand_base_dist = torch.norm(right_hand_base_pos - torch.tensor([-0.0, -0.55, 0.5], dtype=torch.float, device="cuda:0"), p=2, dim=-1)
-    left_hand_base_dist = torch.norm(left_hand_base_pos - torch.tensor([-0.0, -1.15, 0.5], dtype=torch.float, device="cuda:0"), p=2, dim=-1)
+    right_hand_base_dist = torch.norm(right_hand_base_pos - torch.tensor([-0.0, -0.55, 0.5], dtype=torch.float, device=rew_buf.device), p=2, dim=-1)
+    left_hand_base_dist = torch.norm(left_hand_base_pos - torch.tensor([-0.0, -1.15, 0.5], dtype=torch.float, device=rew_buf.device), p=2, dim=-1)
     resets = torch.where(right_hand_base_dist >= 0.2, torch.ones_like(resets), resets)
     resets = torch.where(left_hand_base_dist >= 0.2, torch.ones_like(resets), resets)
 
