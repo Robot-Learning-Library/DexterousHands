@@ -29,7 +29,7 @@ class PPO:
                  print_log=True,
                  apply_reset=False,
                  asymmetric=False,
-                 reward_model=True,   # whether to use human feedback reward
+                 reward_model=False,   # whether to use human feedback reward
                  hf_reward_only=False,  # if only using human feedback reward for finetuning
                  policy_kl_reg=False, # if using policy KL constraint; usually policy_kl_reg and hf_reward_only are set the same
                  frame_number=8,
@@ -70,6 +70,7 @@ class PPO:
             self.policy_kl_reg_coef = 20.
             self.adaptive_hf_scale = adaptive_hf_scale
         else:
+            self.policy_kl_reg = policy_kl_reg
             self.reward_model = None
 
         # PPO components
