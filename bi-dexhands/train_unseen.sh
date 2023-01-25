@@ -15,7 +15,7 @@ echo "Save as: " $DATE
 declare -a tasks=( 'ShadowHandCatchAbreastPen' 'ShadowHandCatchUnderarmPen' 'ShadowHandTwoCatchAbreast' 'ShadowHandGraspAndPlaceEgg' 'ShadowHandCatchUnderarm'
 )
 
-declare -a seeds = ('52' '53' '54')
+declare -a seeds=('52' '53' '54')
 
 # declare -a tasks=('ShadowHandGraspAndPlace' 'ShadowHandKettle' 'ShadowHandBlockStack' 'ShadowHandLiftUnderarm'
 # 'ShadowHandPushBlock' 'ShadowHandSwingCup' 'ShadowHandDoorOpenInward'
