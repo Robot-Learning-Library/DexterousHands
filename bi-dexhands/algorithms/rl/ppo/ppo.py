@@ -70,6 +70,7 @@ class PPO:
             self.policy_kl_reg_coef = 20.
             self.adaptive_hf_scale = adaptive_hf_scale
         else:
+            self.policy_kl_reg = policy_kl_reg
             self.reward_model = None
 
         # PPO components
