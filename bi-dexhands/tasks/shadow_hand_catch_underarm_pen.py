@@ -17,7 +17,7 @@ from isaacgym import gymtorch
 from isaacgym import gymapi
 
 
-class ShadowHandCatchUnderarm(BaseTask):
+class ShadowHandCatchUnderarmPen(BaseTask):
     """
     This class corresponds to the Catch Underarm task. In this task, two shadow hands with palms
     facing upwards are controlled to pass an object from one palm to the other. What makes it more difficult 

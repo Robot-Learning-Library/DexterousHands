@@ -27,6 +27,12 @@ from tasks.shadow_hand_kettle import ShadowHandKettle
 from tasks.shadow_hand_block_stack import ShadowHandBlockStack
 from tasks.shadow_hand import ShadowHand
 
+# Unseen task
+from tasks.shadow_hand_catch_abreast_pen import ShadowHandCatchAbreastPen
+from tasks.shadow_hand_catch_underarm_pen import ShadowHandCatchUnderarmPen
+from tasks.shadow_hand_two_catch_abreast import ShadowHandTwoCatchAbreast
+from tasks.shadow_hand_grasp_and_place_egg import ShadowHandGraspAndPlaceEgg
+
 # Allegro hand
 from tasks.allegro_hand_over import AllegroHandOver
 from tasks.allegro_hand_catch_underarm import AllegroHandCatchUnderarm
