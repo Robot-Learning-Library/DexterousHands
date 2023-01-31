@@ -12,7 +12,7 @@ echo "Save as: " $DATE
 # )
 
 # unseen 4 tasks
-declare -a tasks=( 'ShadowHandCatchAbreastPen' 'ShadowHandCatchUnderarmPen' 'ShadowHandTwoCatchAbreast' 'ShadowHandGraspAndPlaceEgg' 'ShadowHandCatchUnderarm'
+declare -a tasks=( 'ShadowHandCatchAbreastPen' 'ShadowHandCatchUnderarmPen' 'ShadowHandTwoCatchAbreast' 'ShadowHandGraspAndPlaceEgg'
 )
 
 declare -a seeds=('52' '53' '54')
