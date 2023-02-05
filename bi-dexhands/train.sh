@@ -44,8 +44,8 @@ declare -a tasks=( 'ShadowHandCatchAbreastPen' 'ShadowHandCatchUnderarmPen' 'Sha
 declare -a seeds=($(seq 70 1 79))
 
 mkdir -p log/$DATE
-for i in ${!tasks[@]}; do
-	for j in ${!seeds[@]}; do
+for j in ${!seeds[@]}; do
+	for i in ${!tasks[@]}; do
 		# nohup python train.py --task=${tasks[$i]} --algo=ppo --record_video=True --wandb_activate=True --wandb_entity=quantumiracle >> log/$DATE/${tasks[$i]}.log &
 		# train from scratch
 		echo nohup python train.py --task=${tasks[$i]}  --seed=${seeds[$j]} --rl_device=cuda:$((2 + i % 6)) --sim_device=cuda:$((2 + i % 6)) --graphics_device_id=$((2 + i % 6)) --algo=ppo --headless --learned_seed=$(seq -s, ${seeds[0]} 1 ${seeds[$j-1]}) --record_video=True --record_video_interval=30 --wandb_activate=True --wandb_entity=quantumiracle : log/$DATE/${tasks[$i]}.log &
