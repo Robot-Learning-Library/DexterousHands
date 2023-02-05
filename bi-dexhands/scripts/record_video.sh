@@ -31,7 +31,7 @@ echo "Save as: " $DATE
 # done
 
 declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandBlockStack' 'ShadowHandCatchUnderarm'
-'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap' 'ShadowHandLiftUnderarm' 'ShadowHandTwoCatchUnderarm'
+'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap'  'ShadowHandTwoCatchUnderarm'
 'ShadowHandDoorOpenInward' 'ShadowHandDoorOpenOutward' 'ShadowHandDoorCloseInward'
 'ShadowHandPushBlock'
 'ShadowHandScissors' 'ShadowHandPen' 'ShadowHandGraspAndPlace' 'ShadowHandSwitch'
@@ -40,13 +40,31 @@ declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'Shado
 # mkdir -p log/$DATE
 
 declare -a checkpoints=('6000' '7000' '8000' '9000' '10000')
-declare -a seeds=('45' '46' '47' '48' '49')
+declare -a seeds=('48' '49')
 
 for i in ${!tasks[@]}; do
 	for j in ${!checkpoints[@]}; do
 		for k in ${!seeds[@]}; do
-			python -W ignore train.py  --task=${tasks[$i]} --algo=ppo --test --record_traj=True --num_envs=1 --record_video_path=data/videos/seed${seeds[$k]} --max_iterations=5 --model_dir=/home/jmji/human_like/iteration_4/${tasks[$i]}/ppo_seed${seeds[$k]}/model_${checkpoints[$j]}.pt --record_video=True --record_video_interval=1 
+			python -W ignore train.py  --task=${tasks[$i]} --algo=ppo --test --record_traj=True --num_envs=1 --record_video_path=data/videos/seed${seeds[$k]} --max_iterations=5 --model_dir=/home/jmji/human_like/iteration_4_pro/${tasks[$i]}/ppo_seed${seeds[$k]}/model_${checkpoints[$j]}.pt --record_video=True --record_video_interval=1 
 		done
 	done
 done
+
+# declare -a tasks=( 'ShadowHandCatchAbreastPen' 'ShadowHandTwoCatchAbreast' 'ShadowHandCatchUnderarmPen' 'ShadowHandGraspAndPlaceEgg'
+# )
+
+
+# declare -a checkpoints=('6000' '7000' '8000' '9000' '10000')
+# declare -a seeds=('62' '63' '64')
+
+# mkdir -p log/$DATE
+
+# for i in ${!tasks[@]}; do
+# 	for j in ${!checkpoints[@]}; do
+# 		for k in ${!seeds[@]}; do
+# 			python -W ignore train.py  --task=${tasks[$i]} --algo=ppo --test --record_traj=True --num_envs=1 --record_video_path=data/videos/seed${seeds[$k]} --max_iterations=5 --model_dir=/home/jmji/human_like/unseen/${tasks[$i]}/ppo/ppo_seed${seeds[$k]}/model_${checkpoints[$j]}.pt --record_video=True --record_video_interval=1 
+# 		done
+# 	done
+# done
+
 
