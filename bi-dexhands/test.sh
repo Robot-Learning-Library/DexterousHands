@@ -16,19 +16,19 @@ echo "Save as: " $DATE
 # declare -a tasks=('ShadowHandGraspAndPlace' 'ShadowHandSwitch' 'ShadowHandDoorCloseOutward') 
 
 # unseen 4 tasks
-declare -a tasks=( 'ShadowHandCatchAbreastPen' 'ShadowHandCatchUnderarmPen' 'ShadowHandTwoCatchAbreast' 'ShadowHandGraspAndPlaceEgg'
-)
+# declare -a tasks=( 'ShadowHandCatchAbreastPen' 'ShadowHandCatchUnderarmPen' 'ShadowHandTwoCatchAbreast' 'ShadowHandGraspAndPlaceEgg'
+# )
 
 # selected 17 tasks
-# declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandBlockStack' 'ShadowHandCatchUnderarm'
-# 'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap' 'ShadowHandLiftUnderarm' 'ShadowHandTwoCatchUnderarm'
-# 'ShadowHandDoorOpenInward' 'ShadowHandDoorOpenOutward' 'ShadowHandDoorCloseInward' 'ShadowHandPushBlock'
-# 'ShadowHandScissors' 'ShadowHandPen' 'ShadowHandGraspAndPlace' 'ShadowHandSwitch'
-# )
+declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandBlockStack' 'ShadowHandCatchUnderarm'
+'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap' 'ShadowHandLiftUnderarm' 'ShadowHandTwoCatchUnderarm'
+'ShadowHandDoorOpenInward' 'ShadowHandDoorOpenOutward' 'ShadowHandDoorCloseInward' 'ShadowHandPushBlock'
+'ShadowHandScissors' 'ShadowHandPen' 'ShadowHandGraspAndPlace' 'ShadowHandSwitch'
+)
 
 # declare -a checkpoints=('6000' '7000' '8000' '9000' '10000')
 declare -a checkpoints=($(seq 6000 1000 10000))
-declare -a seeds=($(seq 30 1 39))
+declare -a seeds=($(seq 43 1 44))
 
 
 for i in ${!tasks[@]}; do

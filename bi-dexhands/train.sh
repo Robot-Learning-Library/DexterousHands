@@ -18,15 +18,15 @@ echo "Save as: " $DATE
 # declare -a tasks=('ShadowHandGraspAndPlace' 'ShadowHandSwitch' 'ShadowHandDoorCloseOutward') 
 
 # unseen 4 tasks
-# declare -a tasks=( 'ShadowHandCatchAbreastPen' 'ShadowHandCatchUnderarmPen' 'ShadowHandTwoCatchAbreast' 'ShadowHandGraspAndPlaceEgg'
-# )
+declare -a tasks=( 'ShadowHandCatchAbreastPen' 'ShadowHandCatchUnderarmPen' 'ShadowHandTwoCatchAbreast' 'ShadowHandGraspAndPlaceEgg'
+)
 
 # selected 17 tasks
-declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandBlockStack' 'ShadowHandCatchUnderarm'
-'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap' 'ShadowHandLiftUnderarm' 'ShadowHandTwoCatchUnderarm'
-'ShadowHandDoorOpenInward' 'ShadowHandDoorOpenOutward' 'ShadowHandDoorCloseInward' 'ShadowHandPushBlock'
-'ShadowHandScissors' 'ShadowHandPen' 'ShadowHandGraspAndPlace' 'ShadowHandSwitch'
-)
+# declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'ShadowHandBlockStack' 'ShadowHandCatchUnderarm'
+# 'ShadowHandCatchOver2Underarm' 'ShadowHandBottleCap' 'ShadowHandLiftUnderarm' 'ShadowHandTwoCatchUnderarm'
+# 'ShadowHandDoorOpenInward' 'ShadowHandDoorOpenOutward' 'ShadowHandDoorCloseInward' 'ShadowHandPushBlock'
+# 'ShadowHandScissors' 'ShadowHandPen' 'ShadowHandGraspAndPlace' 'ShadowHandSwitch'
+# )
 
 # declare -i seed=30
 # mkdir -p log/$DATE
@@ -40,7 +40,8 @@ declare -a tasks=( 'ShadowHand' 'ShadowHandCatchAbreast' 'ShadowHandOver' 'Shado
 # done
 # wait
 
-declare -a seeds=($(seq 30 1 39))
+# declare -a seeds=($(seq 30 1 39))
+declare -a seeds=($(seq 70 1 79))
 
 mkdir -p log/$DATE
 for i in ${!tasks[@]}; do
