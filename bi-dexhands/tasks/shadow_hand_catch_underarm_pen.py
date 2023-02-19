@@ -399,7 +399,7 @@ class ShadowHandCatchUnderarmPen(BaseTask):
         shadow_hand_start_pose.p = gymapi.Vec3(*get_axis_params(0.5, self.up_axis_idx))
 
         shadow_another_hand_start_pose = gymapi.Transform()
-        shadow_another_hand_start_pose.p = gymapi.Vec3(0, -1.15, 0.5)
+        shadow_another_hand_start_pose.p = gymapi.Vec3(0, -1, 0.5)
         shadow_another_hand_start_pose.r = gymapi.Quat().from_euler_zyx(0, 0, 3.1415)
 
         object_start_pose = gymapi.Transform()
@@ -888,7 +888,7 @@ class ShadowHandCatchUnderarmPen(BaseTask):
                                                     self.x_unit_tensor[env_ids], self.y_unit_tensor[env_ids], self.z_unit_tensor[env_ids])
             
         self.goal_states[env_ids, 0:3] = self.goal_init_state[env_ids, 0:3]
-        self.goal_states[env_ids, 1] -= 0.4
+        self.goal_states[env_ids, 1] -= 0.25
         self.goal_states[env_ids, 3:7] = new_rot
         self.root_state_tensor[self.goal_object_indices[env_ids], 0:3] = self.goal_states[env_ids, 0:3] + self.goal_displacement_tensor
         self.root_state_tensor[self.goal_object_indices[env_ids], 3:7] = self.goal_states[env_ids, 3:7]

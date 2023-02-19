@@ -374,7 +374,7 @@ class ShadowHandCatchAbreastPen(BaseTask):
         shadow_hand_start_pose.r = gymapi.Quat().from_euler_zyx(0, 0.3925, -1.57)
 
         shadow_another_hand_start_pose = gymapi.Transform()
-        shadow_another_hand_start_pose.p = gymapi.Vec3(0, -1.15, 0.5)
+        shadow_another_hand_start_pose.p = gymapi.Vec3(0, -1, 0.5)
         shadow_another_hand_start_pose.r = gymapi.Quat().from_euler_zyx(0, -0.3925, -1.57)
 
         object_start_pose = gymapi.Transform()
@@ -387,7 +387,7 @@ class ShadowHandCatchAbreastPen(BaseTask):
         object_start_pose.p.z = shadow_hand_start_pose.p.z + pose_dz
 
         if self.object_type == "pen":
-            object_start_pose.p.z = shadow_hand_start_pose.p.z + 0.02
+            object_start_pose.p.z = shadow_hand_start_pose.p.z + 0.07
 
         self.goal_displacement = gymapi.Vec3(-0., 0.0, 0.)
         self.goal_displacement_tensor = to_torch(
@@ -866,7 +866,7 @@ class ShadowHandCatchAbreastPen(BaseTask):
             new_rot = randomize_rotation_pen(rand_floats[:, 3], rand_floats[:, 4], rand_angle_y,
                                                     self.x_unit_tensor[env_ids], self.y_unit_tensor[env_ids], self.z_unit_tensor[env_ids])
         self.goal_states[env_ids, 0:3] = self.goal_init_state[env_ids, 0:3]
-        self.goal_states[env_ids, 1] -= 0.6
+        self.goal_states[env_ids, 1] -= 0.45
         self.goal_states[env_ids, 3:7] = new_rot
         self.root_state_tensor[self.goal_object_indices[env_ids], 0:3] = self.goal_states[env_ids, 0:3] + self.goal_displacement_tensor
         self.root_state_tensor[self.goal_object_indices[env_ids], 3:7] = self.goal_states[env_ids, 3:7]
@@ -1256,10 +1256,10 @@ def compute_hand_reward(
     # resets = torch.where(right_hand_pos[:, 1] <= -0.7, torch.ones_like(reset_buf), reset_buf)
     # resets = torch.where(right_hand_pos[:, 2] >= 0.7, torch.ones_like(resets), resets)
     right_hand_base_dist = torch.norm(right_hand_base_pos - torch.tensor([-0.3, -0.55, 0.5], dtype=torch.float, device=device), p=2, dim=-1)
-    left_hand_base_dist = torch.norm(left_hand_base_pos - torch.tensor([-0.3, -1.15, 0.5], dtype=torch.float, device=device), p=2, dim=-1)
+    left_hand_base_dist = torch.norm(left_hand_base_pos - torch.tensor([-0.3, -1.0, 0.5], dtype=torch.float, device=device), p=2, dim=-1)
 
-    resets = torch.where(right_hand_base_dist >= 0.1, torch.ones_like(reset_buf), reset_buf)
-    resets = torch.where(left_hand_base_dist >= 0.1, torch.ones_like(resets), resets)
+    resets = torch.where(right_hand_base_dist >= 0.2, torch.ones_like(reset_buf), reset_buf)
+    resets = torch.where(left_hand_base_dist >= 0.2, torch.ones_like(resets), resets)
 
     resets = torch.where(object_pos[:, 2] <= 0.2, torch.ones_like(resets), resets)
     if max_consecutive_successes > 0:
