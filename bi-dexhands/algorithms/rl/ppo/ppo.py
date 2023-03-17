@@ -133,6 +133,7 @@ class PPO:
         self.apply_reset = apply_reset
         
         self.loaded_actor_critic = None
+        self.reward_engineering = True
 
     def test(self, path):
         self.actor_critic.load_state_dict(torch.load(path, map_location=self.device))
@@ -264,6 +265,16 @@ class PPO:
                     action_penalty = torch.sum(torch.clamp(actions, -1, 1) ** 2, dim=-1)
                     rews -= 0.002 * action_penalty * rews
                     infos["action_penalty"] = 0.002 * action_penalty * rews
+
+                    # reward engineering for human-like
+                    if self.reward_engineering:
+                        torque_penalty = (self.vec_env.task.dof_force_tensor ** 2).sum(-1)
+                        work_penalty = ((self.vec_env.task.dof_force_tensor * self.vec_env.task.dof_state.view(self.vec_env.num_envs, -1, 2)[..., 1]).sum(-1)) ** 2
+
+                        rews -= 0.01 * torque_penalty * rews
+                        rews -= 0.02 * work_penalty * rews
+                        infos["torque_penalty"] = 0.01 * torque_penalty * rews
+                        infos["work_penalty"] = 0.02 * work_penalty * rews
 
                     # Record the transition
                     self.storage.add_transitions(current_obs, current_states, actions, rews, dones, values, actions_log_prob, mu, sigma)
