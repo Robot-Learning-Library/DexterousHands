@@ -1,3 +1,7 @@
+# collect trajs
+python train.py --task='ShadowHandOver' --model_dir=./logs/ShadowHandOver/ppo/ppo_seed210/model_20000.pt --algo=ppo --headless --test  --num_envs=1  --record_traj=True --record_traj_path=data/trajs --max_iterations=100
+
+# collect videos
 python train.py --task=ShadowHand --algo=ppo --model_dir=./logs/ShadowHand/ppo/ppo_seed-1/model_10000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
 * python train.py --task=ShadowHandBlockStack --algo=ppo --model_dir=./logs/ShadowHandBlockStack/ppo/ppo_seed-1/model_5000.pt --test --num_envs=1 --record_video=True --record_video_interval=1
 python train.py --task=ShadowHandBottleCap --algo=ppo --model_dir=./logs/ShadowHandBottleCap/ppo/ppo_seed-1/model_100000.pt --test --num_envs=1 --record_video=True --record_video_interval=1

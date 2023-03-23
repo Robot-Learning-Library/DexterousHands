@@ -133,7 +133,7 @@ class PPO:
         self.apply_reset = apply_reset
         
         self.loaded_actor_critic = None
-        self.reward_engineering = True
+        self.reward_engineering = False
 
     def test(self, path):
         self.actor_critic.load_state_dict(torch.load(path, map_location=self.device))
@@ -156,6 +156,8 @@ class PPO:
         current_obs = self.vec_env.reset()
         current_states = self.vec_env.get_state()
         smooth_task_reward = 0.
+        if self.record_traj:
+            os.makedirs(self.record_traj_path.rsplit('/', 1)[0], exist_ok=True)  # a/b/cd -> a/b
 
         if self.is_testing:
             for it in range(num_learning_iterations):
@@ -203,7 +205,7 @@ class PPO:
                 if self.record_traj:
                     with open(self.record_traj_path+f'traj-episode-{it}.pkl', 'wb') as f:
                         pickle.dump(traj_info, f)
-                print(f" \033[1m Learning iteration {it+1}/{num_learning_iterations} \033[0m ")
+                print(f" \033[1m Iteration {it+1}/{num_learning_iterations} \033[0m ")
             self.vec_env.task.virtual_display.stop()
             
         else:

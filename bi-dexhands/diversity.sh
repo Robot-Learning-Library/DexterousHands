@@ -25,8 +25,8 @@ declare -a tasks=('ShadowHandOver' 'ShadowHandBottleCap' 'ShadowHandPen' 'Shadow
 # done
 # wait
 
-# declare -a seeds=($(seq 30 1 39))
-declare -a seeds=($(seq 200 1 209))
+declare -a seeds=($(seq 210 1 219))
+# declare -a seeds=($(seq 200 1 209))
 
 # mkdir -p log/$DATE
 # for j in ${!seeds[@]}; do
