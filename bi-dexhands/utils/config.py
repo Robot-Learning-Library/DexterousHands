@@ -15,22 +15,28 @@ from isaacgym import gymutil
 import numpy as np
 import random
 import torch
-from utils.wandb import init_wandb
+# from utils.wandb import init_wandb
 
 
 def set_np_formatting():
-    np.set_printoptions(edgeitems=30, infstr='inf',
-                        linewidth=4000, nanstr='nan', precision=2,
-                        suppress=False, threshold=10000, formatter=None)
+    np.set_printoptions(
+        edgeitems=30,
+        infstr="inf",
+        linewidth=4000,
+        nanstr="nan",
+        precision=2,
+        suppress=False,
+        threshold=10000,
+        formatter=None,
+    )
 
 
 def warn_task_name():
-    raise Exception(
-        "Unrecognized task!")
+    raise Exception("Unrecognized task!")
+
 
 def warn_algorithm_name():
-    raise Exception(
-                "Unrecognized algorithm!\nAlgorithm should be one of: [ppo, happo, hatrpo, mappo]")
+    raise Exception("Unrecognized algorithm!\nAlgorithm should be one of: [ppo, happo, hatrpo, mappo]")
 
 
 def set_seed(seed, torch_deterministic=False):
@@ -43,13 +49,13 @@ def set_seed(seed, torch_deterministic=False):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
 
     if torch_deterministic:
         # refer to https://docs.nvidia.com/cuda/cublas/index.html#cublasApi_reproducibility
-        os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
+        os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
         torch.set_deterministic(True)
@@ -61,40 +67,89 @@ def set_seed(seed, torch_deterministic=False):
 
 
 def retrieve_cfg(args, use_rlg_config=False):
-
-    if args.task in ["ShadowHandOver", "ShadowHandCatchUnderarm", "ShadowHandTwoCatchUnderarm", "ShadowHandCatchAbreast", "ShadowHandReOrientation",
-                     "ShadowHandCatchOver2Underarm", "ShadowHandBottleCap", "ShadowHandDoorCloseInward", "ShadowHandDoorCloseOutward",
-                    "ShadowHandDoorOpenInward", "ShadowHandDoorOpenOutward", "ShadowHandKettle", "ShadowHandPen", "ShadowHandSwitch",
-                    "ShadowHandPushBlock", "ShadowHandSwingCup", "ShadowHandGraspAndPlace", "ShadowHandScissors", "AllegroHandOver", "AllegroHandCatchUnderarm",
-                    "ShadowHandTwoCatchAbreast", "ShadowHandCatchAbreastPen", "ShadowHandCatchUnderarmPen", "ShadowHandGraspAndPlaceEgg"]:
-        return os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)), "cfg/{}/config.yaml".format(args.algo), "cfg/{}.yaml".format(args.task)
+    if args.task in [
+        "ShadowHandOver",
+        "ShadowHandCatchUnderarm",
+        "ShadowHandTwoCatchUnderarm",
+        "ShadowHandCatchAbreast",
+        "ShadowHandReOrientation",
+        "ShadowHandCatchOver2Underarm",
+        "ShadowHandBottleCap",
+        "ShadowHandDoorCloseInward",
+        "ShadowHandDoorCloseOutward",
+        "ShadowHandDoorOpenInward",
+        "ShadowHandDoorOpenOutward",
+        "ShadowHandKettle",
+        "ShadowHandPen",
+        "ShadowHandSwitch",
+        "ShadowHandPushBlock",
+        "ShadowHandSwingCup",
+        "ShadowHandGraspAndPlace",
+        "ShadowHandScissors",
+        "AllegroHandOver",
+        "AllegroHandCatchUnderarm",
+        "ShadowHandTwoCatchAbreast",
+        "ShadowHandCatchAbreastPen",
+        "ShadowHandCatchUnderarmPen",
+        "ShadowHandGraspAndPlaceEgg",
+    ]:
+        return (
+            os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)),
+            "cfg/{}/config.yaml".format(args.algo),
+            "cfg/{}.yaml".format(args.task),
+        )
 
     elif args.task in ["ShadowHandTwoCatchUnderarm"]:
-        return os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)), "cfg/{}/two_catch_config.yaml".format(args.algo), "cfg/{}.yaml".format(args.task)
+        return (
+            os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)),
+            "cfg/{}/two_catch_config.yaml".format(args.algo),
+            "cfg/{}.yaml".format(args.task),
+        )
 
     elif args.task in ["ShadowHandLiftUnderarm"]:
-        return os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)), "cfg/{}/lift_config.yaml".format(args.algo), "cfg/{}.yaml".format(args.task)
+        return (
+            os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)),
+            "cfg/{}/lift_config.yaml".format(args.algo),
+            "cfg/{}.yaml".format(args.task),
+        )
 
     elif args.task in ["ShadowHandBlockStack"]:
-        return os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)), "cfg/{}/stack_block_config.yaml".format(args.algo), "cfg/{}.yaml".format(args.task)
+        return (
+            os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)),
+            "cfg/{}/stack_block_config.yaml".format(args.algo),
+            "cfg/{}.yaml".format(args.task),
+        )
 
     elif args.task in ["ShadowHand", "ShadowHandReOrientation"]:
-        return os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)), "cfg/{}/re_orientation_config.yaml".format(args.algo), "cfg/{}.yaml".format(args.task)
+        return (
+            os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)),
+            "cfg/{}/re_orientation_config.yaml".format(args.algo),
+            "cfg/{}.yaml".format(args.task),
+        )
 
-
-    elif args.task in ["ShadowHandMetaML1", "ShadowHandMetaMT1", "ShadowHandMetaML4", "ShadowHandMetaMT4", "ShadowHandMetaMT20", "ShadowHandMetaML20"]:
-        return os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)), "cfg/{}/config.yaml".format(args.algo), "cfg/meta_env_cfg/{}.yaml".format(args.task)
+    elif args.task in [
+        "ShadowHandMetaML1",
+        "ShadowHandMetaMT1",
+        "ShadowHandMetaML4",
+        "ShadowHandMetaMT4",
+        "ShadowHandMetaMT20",
+        "ShadowHandMetaML20",
+    ]:
+        return (
+            os.path.join(args.logdir, "{}/{}/{}".format(args.task, args.algo, args.algo)),
+            "cfg/{}/config.yaml".format(args.algo),
+            "cfg/meta_env_cfg/{}.yaml".format(args.task),
+        )
 
     else:
         warn_task_name()
 
 
-
 def load_cfg(args, use_rlg_config=False):
-    with open(os.path.join(os.getcwd(), args.cfg_train), 'r') as f:
+    with open(os.path.join(os.getcwd(), args.cfg_train), "r") as f:
         cfg_train = yaml.load(f, Loader=yaml.SafeLoader)
 
-    with open(os.path.join(os.getcwd(), args.cfg_env), 'r') as f:
+    with open(os.path.join(os.getcwd(), args.cfg_env), "r") as f:
         cfg = yaml.load(f, Loader=yaml.SafeLoader)
 
     # Override number of environments if passed on the command line
@@ -127,16 +182,17 @@ def load_cfg(args, use_rlg_config=False):
     cfg["algo"] = args.algo
 
     if use_rlg_config:
-
         # Set deterministic mode
         if args.torch_deterministic:
             cfg_train["params"]["torch_deterministic"] = True
 
-        exp_name = cfg_train["params"]["config"]['name']
+        exp_name = cfg_train["params"]["config"]["name"]
 
-        if args.experiment != 'Base':
+        if args.experiment != "Base":
             if args.metadata:
-                exp_name = "{}_{}_{}_{}".format(args.experiment, args.task_type, args.device, str(args.physics_engine).split("_")[-1])
+                exp_name = "{}_{}_{}_{}".format(
+                    args.experiment, args.task_type, args.device, str(args.physics_engine).split("_")[-1]
+                )
 
                 if cfg["task"]["randomize"]:
                     exp_name += "_DR"
@@ -144,7 +200,7 @@ def load_cfg(args, use_rlg_config=False):
                 exp_name = args.experiment
 
         # Override config name
-        cfg_train["params"]["config"]['name'] = exp_name
+        cfg_train["params"]["config"]["name"] = exp_name
 
         if args.resume > 0:
             cfg_train["params"]["load_checkpoint"] = True
@@ -154,7 +210,7 @@ def load_cfg(args, use_rlg_config=False):
 
         # Set maximum number of training iterations (epochs)
         if args.max_iterations > 0:
-            cfg_train["params"]["config"]['max_epochs'] = args.max_iterations
+            cfg_train["params"]["config"]["max_epochs"] = args.max_iterations
 
         cfg_train["params"]["config"]["num_actors"] = cfg["env"]["numEnvs"]
 
@@ -166,7 +222,6 @@ def load_cfg(args, use_rlg_config=False):
 
         cfg["args"] = args
     else:
-
         # Set deterministic mode
         if args.torch_deterministic:
             cfg_train["torch_deterministic"] = True
@@ -176,9 +231,11 @@ def load_cfg(args, use_rlg_config=False):
             cfg_train["seed"] = args.seed
 
         log_id = args.logdir
-        if args.experiment != 'Base':
+        if args.experiment != "Base":
             if args.metadata:
-                log_id = args.logdir + "_{}_{}_{}_{}".format(args.experiment, args.task_type, args.device, str(args.physics_engine).split("_")[-1])
+                log_id = args.logdir + "_{}_{}_{}_{}".format(
+                    args.experiment, args.task_type, args.device, str(args.physics_engine).split("_")[-1]
+                )
                 if cfg["task"]["randomize"]:
                     log_id += "_DR"
             else:
@@ -193,7 +250,7 @@ def load_cfg(args, use_rlg_config=False):
 def parse_sim_params(args, cfg, cfg_train):
     # initialize sim
     sim_params = gymapi.SimParams()
-    sim_params.dt = 1./60.
+    sim_params.dt = 1.0 / 60.0
     sim_params.num_client_threads = args.slices
 
     if args.physics_engine == gymapi.SIM_FLEX:
@@ -227,93 +284,133 @@ def parse_sim_params(args, cfg, cfg_train):
 
 def get_args(benchmark=False, use_rlg_config=False):
     custom_parameters = [
-        {"name": "--test", "action": "store_true", "default": False,
-            "help": "Run trained policy, no training"},
-        {"name": "--play", "action": "store_true", "default": False,
-            "help": "Run trained policy, the same as test, can be used only by rl_games RL library"},
-        {"name": "--resume", "type": int, "default": 0,
-            "help": "Resume training or start testing from a checkpoint"},
-        {"name": "--checkpoint", "type": str, "default": "Base",
-            "help": "Path to the saved weights, only for rl_games RL library"},
-        {"name": "--headless", "action": "store_true", "default": False,
-            "help": "Force display off at all times"},
-        {"name": "--horovod", "action": "store_true", "default": False,
-            "help": "Use horovod for multi-gpu training, have effect only with rl_games RL library"},
-        {"name": "--task", "type": str, "default": "Humanoid",
-            "help": "Can be BallBalance, Cartpole, CartpoleYUp, Ant, Humanoid, Anymal, FrankaCabinet, Quadcopter, ShadowHand, Ingenuity"},
-        {"name": "--task_type", "type": str,
-            "default": "Python", "help": "Choose Python or C++"},
-        {"name": "--rl_device", "type": str, "default": "cuda:0",
-            "help": "Choose CPU or GPU device for inferencing policy network"},
+        {"name": "--test", "action": "store_true", "default": False, "help": "Run trained policy, no training"},
+        {
+            "name": "--play",
+            "action": "store_true",
+            "default": False,
+            "help": "Run trained policy, the same as test, can be used only by rl_games RL library",
+        },
+        {"name": "--resume", "type": int, "default": 0, "help": "Resume training or start testing from a checkpoint"},
+        {
+            "name": "--checkpoint",
+            "type": str,
+            "default": "Base",
+            "help": "Path to the saved weights, only for rl_games RL library",
+        },
+        {"name": "--headless", "action": "store_true", "default": False, "help": "Force display off at all times"},
+        {
+            "name": "--horovod",
+            "action": "store_true",
+            "default": False,
+            "help": "Use horovod for multi-gpu training, have effect only with rl_games RL library",
+        },
+        {
+            "name": "--task",
+            "type": str,
+            "default": "Humanoid",
+            "help": "Can be BallBalance, Cartpole, CartpoleYUp, Ant, Humanoid, Anymal, FrankaCabinet, Quadcopter, ShadowHand, Ingenuity",
+        },
+        {"name": "--task_type", "type": str, "default": "Python", "help": "Choose Python or C++"},
+        {
+            "name": "--rl_device",
+            "type": str,
+            "default": "cuda:0",
+            "help": "Choose CPU or GPU device for inferencing policy network",
+        },
         {"name": "--logdir", "type": str, "default": "logs/"},
-        {"name": "--experiment", "type": str, "default": "Base",
-            "help": "Experiment name. If used with --metadata flag an additional information about physics engine, sim device, pipeline and domain randomization will be added to the name"},
-        {"name": "--metadata", "action": "store_true", "default": False,
-            "help": "Requires --experiment flag, adds physics engine, sim device, pipeline info and if domain randomization is used to the experiment name provided by user"},
-        {"name": "--cfg_train", "type": str,
-            "default": "Base"},
+        {
+            "name": "--experiment",
+            "type": str,
+            "default": "Base",
+            "help": "Experiment name. If used with --metadata flag an additional information about physics engine, sim device, pipeline and domain randomization will be added to the name",
+        },
+        {
+            "name": "--metadata",
+            "action": "store_true",
+            "default": False,
+            "help": "Requires --experiment flag, adds physics engine, sim device, pipeline info and if domain randomization is used to the experiment name provided by user",
+        },
+        {"name": "--cfg_train", "type": str, "default": "Base"},
         {"name": "--cfg_env", "type": str, "default": "Base"},
-        {"name": "--num_envs", "type": int, "default": 0,
-            "help": "Number of environments to create - override config file"},
-        {"name": "--episode_length", "type": int, "default": 0,
-            "help": "Episode length, by default is read from yaml config"},
+        {
+            "name": "--num_envs",
+            "type": int,
+            "default": 0,
+            "help": "Number of environments to create - override config file",
+        },
+        {
+            "name": "--episode_length",
+            "type": int,
+            "default": 0,
+            "help": "Episode length, by default is read from yaml config",
+        },
         {"name": "--seed", "type": int, "help": "Random seed"},
-        {"name": "--max_iterations", "type": int, "default": -1,
-            "help": "Set a maximum number of training iterations"},
-        {"name": "--steps_num", "type": int, "default": -1,
-            "help": "Set number of simulation steps per 1 PPO iteration. Supported only by rl_games. If not -1 overrides the config settings."},
-        {"name": "--minibatch_size", "type": int, "default": -1,
-            "help": "Set batch size for PPO optimization step. Supported only by rl_games. If not -1 overrides the config settings."},
-        {"name": "--randomize", "action": "store_true", "default": False,
-            "help": "Apply physics domain randomization"},
-        {"name": "--torch_deterministic", "action": "store_true", "default": False,
-            "help": "Apply additional PyTorch settings for more deterministic behaviour"},
-        {"name": "--algo", "type": str, "default": "happo",
-            "help": "Choose an algorithm"},
-        {"name": "--model_dir", "type": str, "default": "",
-            "help": "Choose a model dir"},
-        {"name": "--datatype", "type": str, "default": "random",
-            "help": "Choose an ffline datatype"},
-        {"name": "--wandb_activate", "type": bool, "default": False,
-            "help": "Activate WandB"},
-        {"name": "--wandb_entity", "type": str, "default": "",
-            "help": "Account of WandB"},
-        {"name": "--wandb_group", "type": str, "default": "",
-            "help": "Choose a group name"},
-        {"name": "--wandb_project", "type": str, "default": "bi-dexhands",
-            "help": "Choose a project name"},
-        {"name": "--record_video", "type": bool, "default": False,
-            "help": "Record video"},
-        {"name": "--record_video_interval", "type": int, "default": 100,
-            "help": "Interval (episodes) for recording videos"},
-        {"name": "--record_video_path", "type": str, "default": "data/videos",
-            "help": "Path for recording videos"},
-        {"name": "--record_traj", "type": bool, "default": False,
-            "help": "Record the trajectory"},
-        {"name": "--record_traj_path", "type": str, "default": None,
-            "help": "Path for recording trajectories"},
-        {"name": "--learned_seed", "type": str, "default": "",
-            "help": "Learned model's seed, only useful for dppo algorithm"},
+        {"name": "--max_iterations", "type": int, "default": -1, "help": "Set a maximum number of training iterations"},
+        {
+            "name": "--steps_num",
+            "type": int,
+            "default": -1,
+            "help": "Set number of simulation steps per 1 PPO iteration. Supported only by rl_games. If not -1 overrides the config settings.",
+        },
+        {
+            "name": "--minibatch_size",
+            "type": int,
+            "default": -1,
+            "help": "Set batch size for PPO optimization step. Supported only by rl_games. If not -1 overrides the config settings.",
+        },
+        {"name": "--randomize", "action": "store_true", "default": False, "help": "Apply physics domain randomization"},
+        {
+            "name": "--torch_deterministic",
+            "action": "store_true",
+            "default": False,
+            "help": "Apply additional PyTorch settings for more deterministic behaviour",
+        },
+        {"name": "--algo", "type": str, "default": "happo", "help": "Choose an algorithm"},
+        {"name": "--model_dir", "type": str, "default": "", "help": "Choose a model dir"},
+        {"name": "--datatype", "type": str, "default": "random", "help": "Choose an ffline datatype"},
+        {"name": "--wandb_activate", "type": bool, "default": False, "help": "Activate WandB"},
+        {"name": "--wandb_entity", "type": str, "default": "", "help": "Account of WandB"},
+        {"name": "--wandb_group", "type": str, "default": "", "help": "Choose a group name"},
+        {"name": "--wandb_project", "type": str, "default": "bi-dexhands", "help": "Choose a project name"},
+        {"name": "--record_video", "type": bool, "default": False, "help": "Record video"},
+        {
+            "name": "--record_video_interval",
+            "type": int,
+            "default": 100,
+            "help": "Interval (episodes) for recording videos",
+        },
+        {"name": "--record_video_path", "type": str, "default": "data/videos", "help": "Path for recording videos"},
+        {"name": "--record_traj", "type": bool, "default": False, "help": "Record the trajectory"},
+        {"name": "--record_traj_path", "type": str, "default": None, "help": "Path for recording trajectories"},
+        {
+            "name": "--learned_seed",
+            "type": str,
+            "default": "",
+            "help": "Learned model's seed, only useful for dppo algorithm",
+        },
     ]
 
     if benchmark:
-        custom_parameters += [{"name": "--num_proc", "type": int, "default": 1, "help": "Number of child processes to launch"},
-                              {"name": "--random_actions", "action": "store_true",
-                                  "help": "Run benchmark with random actions instead of inferencing"},
-                              {"name": "--bench_len", "type": int, "default": 10,
-                                  "help": "Number of timing reports"},
-                              {"name": "--bench_file", "action": "store", "help": "Filename to store benchmark results"}]
+        custom_parameters += [
+            {"name": "--num_proc", "type": int, "default": 1, "help": "Number of child processes to launch"},
+            {
+                "name": "--random_actions",
+                "action": "store_true",
+                "help": "Run benchmark with random actions instead of inferencing",
+            },
+            {"name": "--bench_len", "type": int, "default": 10, "help": "Number of timing reports"},
+            {"name": "--bench_file", "action": "store", "help": "Filename to store benchmark results"},
+        ]
 
     # parse arguments
-    args = gymutil.parse_arguments(
-        description="RL Policy",
-        custom_parameters=custom_parameters)
-    
-    print('raw: ', args)
+    args = gymutil.parse_arguments(description="RL Policy", custom_parameters=custom_parameters)
+
+    print("raw: ", args)
 
     # allignment with examples
     args.device_id = args.compute_device_id
-    args.device = args.sim_device_type if args.use_gpu_pipeline else 'cpu'
+    args.device = args.sim_device_type if args.use_gpu_pipeline else "cpu"
 
     if args.test:
         args.play = args.test
@@ -327,7 +424,9 @@ def get_args(benchmark=False, use_rlg_config=False):
 
     if use_rlg_config == False:
         if args.horovod:
-            print("Distributed multi-gpu training with Horovod is not supported by rl-pytorch. Use rl_games for distributed training.")
+            print(
+                "Distributed multi-gpu training with Horovod is not supported by rl-pytorch. Use rl_games for distributed training."
+            )
         if args.steps_num != -1:
             print("Setting number of simulation steps per iteration from command line is not supported by rl-pytorch.")
         if args.minibatch_size != -1:
@@ -346,11 +445,13 @@ def get_args(benchmark=False, use_rlg_config=False):
         args.cfg_env = cfg_env
 
     from datetime import datetime
+
     now = datetime.now()
     args.save_time_stamp = now.strftime("%Y%m%d%H%M%S")
-    args.wandb_name = '_'.join((args.task, args.algo, str(args.save_time_stamp)))
+    args.wandb_name = "_".join((args.task, args.algo, str(args.save_time_stamp)))
     if args.wandb_activate:
-        init_wandb(args)
+        # init_wandb(args)
+        pass
 
     # if args.algo not in ["maddpg", "happo", "mappo", "hatrpo","ippo","ppo","sac","td3","ddpg","trpo"]:
     #     warn_algorithm_name()

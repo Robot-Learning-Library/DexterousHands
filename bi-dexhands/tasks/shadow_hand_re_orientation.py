@@ -268,6 +268,8 @@ class ShadowHandReOrientation(BaseTask):
 
         asset_root = "../../assets"
         shadow_hand_asset_file = "mjcf/open_ai_assets/hand/shadow_hand.xml"
+        shadow_hand_left_asset_file = "mjcf/open_ai_assets/hand/shadow_hand_left.xml"
+        
         shadow_hand_another_asset_file = "mjcf/open_ai_assets/hand/shadow_hand1.xml"
         table_texture_files = "textures/texture_stone_stone_texture_0.jpg"
 
@@ -292,8 +294,9 @@ class ShadowHandReOrientation(BaseTask):
         asset_options.default_dof_drive_mode = gymapi.DOF_MODE_NONE
 
         shadow_hand_asset = self.gym.load_asset(self.sim, asset_root, shadow_hand_asset_file, asset_options)
-        shadow_hand_another_asset = self.gym.load_asset(self.sim, asset_root, shadow_hand_another_asset_file, asset_options)
-
+        shadow_hand_another_asset = self.gym.load_asset(
+            self.sim, asset_root, shadow_hand_left_asset_file, asset_options
+        )
         self.num_shadow_hand_bodies = self.gym.get_asset_rigid_body_count(shadow_hand_asset)
         self.num_shadow_hand_shapes = self.gym.get_asset_rigid_shape_count(shadow_hand_asset)
         self.num_shadow_hand_dofs = self.gym.get_asset_dof_count(shadow_hand_asset)
@@ -318,14 +321,14 @@ class ShadowHandReOrientation(BaseTask):
             for rt in relevant_tendons:
                 if self.gym.get_asset_tendon_name(shadow_hand_asset, i) == rt:
                     tendon_props[i].limit_stiffness = limit_stiffness
-                    tendon_props[i].damping = t_damping            
+                    tendon_props[i].damping = t_damping
             for rt in a_relevant_tendons:
                 if self.gym.get_asset_tendon_name(shadow_hand_another_asset, i) == rt:
                     a_tendon_props[i].limit_stiffness = limit_stiffness
                     a_tendon_props[i].damping = t_damping
         self.gym.set_asset_tendon_properties(shadow_hand_asset, tendon_props)
         self.gym.set_asset_tendon_properties(shadow_hand_another_asset, a_tendon_props)
-        
+
 
         actuated_dof_names = [self.gym.get_asset_actuator_joint_name(shadow_hand_asset, i) for i in range(self.num_shadow_hand_actuators)]
         self.actuated_dof_indices = [self.gym.find_asset_dof_index(shadow_hand_asset, name) for name in actuated_dof_names]
@@ -341,15 +344,22 @@ class ShadowHandReOrientation(BaseTask):
         self.sensors = []
         sensor_pose = gymapi.Transform()
 
+        self.shadow_hand_left_dof_lower_limits = []
+        self.shadow_hand_left_dof_upper_limits = []
+
         for i in range(self.num_shadow_hand_dofs):
-            self.shadow_hand_dof_lower_limits.append(shadow_hand_dof_props['lower'][i])
-            self.shadow_hand_dof_upper_limits.append(shadow_hand_dof_props['upper'][i])
+            self.shadow_hand_dof_lower_limits.append(shadow_hand_dof_props["lower"][i])
+            self.shadow_hand_dof_upper_limits.append(shadow_hand_dof_props["upper"][i])
+            self.shadow_hand_left_dof_lower_limits.append(shadow_hand_another_dof_props["lower"][i])
+            self.shadow_hand_left_dof_upper_limits.append(shadow_hand_another_dof_props["upper"][i])
             self.shadow_hand_dof_default_pos.append(0.0)
             self.shadow_hand_dof_default_vel.append(0.0)
 
         self.actuated_dof_indices = to_torch(self.actuated_dof_indices, dtype=torch.long, device=self.device)
         self.shadow_hand_dof_lower_limits = to_torch(self.shadow_hand_dof_lower_limits, device=self.device)
         self.shadow_hand_dof_upper_limits = to_torch(self.shadow_hand_dof_upper_limits, device=self.device)
+        self.shadow_hand_left_dof_lower_limits = to_torch(self.shadow_hand_left_dof_lower_limits, device=self.device)
+        self.shadow_hand_left_dof_upper_limits = to_torch(self.shadow_hand_left_dof_upper_limits, device=self.device)
         self.shadow_hand_dof_default_pos = to_torch(self.shadow_hand_dof_default_pos, device=self.device)
         self.shadow_hand_dof_default_vel = to_torch(self.shadow_hand_dof_default_vel, device=self.device)
 
@@ -367,8 +377,8 @@ class ShadowHandReOrientation(BaseTask):
         shadow_hand_start_pose.p = gymapi.Vec3(*get_axis_params(0.5, self.up_axis_idx))
 
         shadow_another_hand_start_pose = gymapi.Transform()
-        shadow_another_hand_start_pose.p = gymapi.Vec3(0, -1.15, 0.5)
-        shadow_another_hand_start_pose.r = gymapi.Quat().from_euler_zyx(0, 0, 3.1415)
+        shadow_another_hand_start_pose.p = gymapi.Vec3(0, -1.15, 0.465)
+        shadow_another_hand_start_pose.r = gymapi.Quat().from_euler_zyx(0, 3.1415, 3.1415)
 
         object_start_pose = gymapi.Transform()
         object_start_pose.p = gymapi.Vec3()
@@ -1053,20 +1063,35 @@ class ShadowHandReOrientation(BaseTask):
             self.cur_targets[:, self.actuated_dof_indices] = tensor_clamp(targets,
                                                                           self.shadow_hand_dof_lower_limits[self.actuated_dof_indices], self.shadow_hand_dof_upper_limits[self.actuated_dof_indices])
         else:
-            self.cur_targets[:, self.actuated_dof_indices] = scale(self.actions[:, :20],
-                                                                   self.shadow_hand_dof_lower_limits[self.actuated_dof_indices], self.shadow_hand_dof_upper_limits[self.actuated_dof_indices])
-            self.cur_targets[:, self.actuated_dof_indices] = self.act_moving_average * self.cur_targets[:,
-                                                                                                        self.actuated_dof_indices] + (1.0 - self.act_moving_average) * self.prev_targets[:, self.actuated_dof_indices]
-            self.cur_targets[:, self.actuated_dof_indices] = tensor_clamp(self.cur_targets[:, self.actuated_dof_indices],
-                                                                          self.shadow_hand_dof_lower_limits[self.actuated_dof_indices], self.shadow_hand_dof_upper_limits[self.actuated_dof_indices])
+            self.cur_targets[:, self.actuated_dof_indices] = scale(
+                self.actions[:, :20],
+                self.shadow_hand_dof_lower_limits[self.actuated_dof_indices],
+                self.shadow_hand_dof_upper_limits[self.actuated_dof_indices],
+            )
+            self.cur_targets[:, self.actuated_dof_indices] = (
+                self.act_moving_average * self.cur_targets[:, self.actuated_dof_indices]
+                + (1.0 - self.act_moving_average) * self.prev_targets[:, self.actuated_dof_indices]
+            )
+            self.cur_targets[:, self.actuated_dof_indices] = tensor_clamp(
+                self.cur_targets[:, self.actuated_dof_indices],
+                self.shadow_hand_dof_lower_limits[self.actuated_dof_indices],
+                self.shadow_hand_dof_upper_limits[self.actuated_dof_indices],
+            )
 
-            self.cur_targets[:, self.actuated_dof_indices + 24] = scale(self.actions[:, 20:40],
-                                                                   self.shadow_hand_dof_lower_limits[self.actuated_dof_indices], self.shadow_hand_dof_upper_limits[self.actuated_dof_indices])
-            self.cur_targets[:, self.actuated_dof_indices + 24] = self.act_moving_average * self.cur_targets[:,
-                                                                                                        self.actuated_dof_indices + 24] + (1.0 - self.act_moving_average) * self.prev_targets[:, self.actuated_dof_indices]
-            self.cur_targets[:, self.actuated_dof_indices + 24] = tensor_clamp(self.cur_targets[:, self.actuated_dof_indices + 24],
-                                                                          self.shadow_hand_dof_lower_limits[self.actuated_dof_indices], self.shadow_hand_dof_upper_limits[self.actuated_dof_indices])
-            
+            self.cur_targets[:, self.actuated_dof_indices + 24] = scale(
+                self.actions[:, 20:40],
+                self.shadow_hand_left_dof_lower_limits[self.actuated_dof_indices],
+                self.shadow_hand_left_dof_upper_limits[self.actuated_dof_indices],
+            )
+            self.cur_targets[:, self.actuated_dof_indices + 24] = (
+                self.act_moving_average * self.cur_targets[:, self.actuated_dof_indices + 24]
+                + (1.0 - self.act_moving_average) * self.prev_targets[:, self.actuated_dof_indices]
+            )
+            self.cur_targets[:, self.actuated_dof_indices + 24] = tensor_clamp(
+                self.cur_targets[:, self.actuated_dof_indices + 24],
+                self.shadow_hand_left_dof_lower_limits[self.actuated_dof_indices],
+                self.shadow_hand_left_dof_upper_limits[self.actuated_dof_indices],
+            )
         self.prev_targets[:, self.actuated_dof_indices] = self.cur_targets[:, self.actuated_dof_indices]
         self.prev_targets[:, self.actuated_dof_indices + 24] = self.cur_targets[:, self.actuated_dof_indices + 24]
         self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.cur_targets))
@@ -1275,10 +1300,15 @@ def compute_hand_reward(
     quat_another_diff = quat_mul(object_another_rot, quat_conjugate(target_another_rot))
     rot_another_dist = 2.0 * torch.asin(torch.clamp(torch.norm(quat_another_diff[:, 0:3], p=2, dim=-1), max=1.0))
 
-    dist_rew = goal_dist * dist_reward_scale + goal_another_dist * dist_reward_scale
-    rot_rew = 1.0/(torch.abs(rot_dist) + rot_eps) * rot_reward_scale + 1.0/(torch.abs(rot_another_dist) + rot_eps) * rot_reward_scale
+    # dist_rew = goal_dist * dist_reward_scale + goal_another_dist * dist_reward_scale
+    dist_rew = goal_another_dist * dist_reward_scale
+    # rot_rew = (
+    #     1.0 / (torch.abs(rot_dist) + rot_eps) * rot_reward_scale
+    #     + 1.0 / (torch.abs(rot_another_dist) + rot_eps) * rot_reward_scale
+    # )
+    rot_rew = 1.0 / (torch.abs(rot_another_dist) + rot_eps) * rot_reward_scale
 
-    action_penalty = torch.sum(actions ** 2, dim=-1)
+    action_penalty = torch.sum(actions**2, dim=-1)
 
     # Total reward is: position distance + orientation alignment + action regularization + success bonus + fall penalty
     reward = dist_rew + rot_rew + action_penalty * action_penalty_scale
@@ -1297,8 +1327,8 @@ def compute_hand_reward(
     reward = torch.where(object_another_pos[:, 2] <= 0.2, reward + fall_penalty, reward)
 
     # Check env termination conditions, including maximum success number
-    resets = torch.where(object_pos[:, 2] <= 0.2, torch.ones_like(reset_buf), reset_buf)
-    resets = torch.where(object_another_pos[:, 2] <= 0.2, torch.ones_like(reset_buf), resets)
+
+    resets = torch.where(object_another_pos[:, 2] <= 0.2, torch.ones_like(reset_buf), reset_buf)
 
     if max_consecutive_successes > 0:
         # Reset progress buffer on goal envs if max_consecutive_successes > 0
